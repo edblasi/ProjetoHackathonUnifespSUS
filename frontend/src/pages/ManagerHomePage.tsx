@@ -61,7 +61,6 @@ import {
 import { Card } from "../components/Card";
 import { DashboardCustomizer, useDashboardCardPreferences } from "../components/DashboardCustomizer";
 import { LanguageToggle } from "../components/LanguageToggle";
-import { useAccessiblePage } from "../components/Accessibility";
 import { SettingsModal } from "../components/SettingsModal";
 import { CommunicationsCenter } from "../components/CommunicationsCenter";
 import { EmptyState, ErrorState, LoadingState } from "../components/DataState";
@@ -194,6 +193,175 @@ function downloadCsv<T extends object>(filename: string, rows: T[]) {
   const escape = (value: unknown) => `"${text(value).split('"').join('""')}"`;
   const content = [headers.map(escape).join(","), ...rows.map((row) => { const record = row as Record<string, unknown>; return headers.map((header) => escape(record[header])).join(","); })].join("\n");
   downloadText(filename, `\uFEFF${content}`, "text/csv;charset=utf-8");
+}
+
+
+type ManagerReportKind = "GENERAL" | "FINANCE" | "LOGISTICS" | "LIFECYCLE" | "EQUITY" | "NETWORK" | "ACCESS_MATRIX";
+
+function managerReportKindFromText(value: string): ManagerReportKind {
+  const normalized = value.toUpperCase();
+  if (/FINAN|FATUR|CUST|ORC|ORÇ/.test(normalized)) return "FINANCE";
+  if (/ACESS|MATRIZ|PERMISS/.test(normalized)) return "ACCESS_MATRIX";
+  if (/SISREG|LOG|REMESS|ESTOQUE/.test(normalized)) return "LOGISTICS";
+  if (/MATCH|REAPROV|CICLO|RECALL|MANUT/.test(normalized)) return "LIFECYCLE";
+  if (/EQUIT|COBERT|ACESSO/.test(normalized)) return "EQUITY";
+  if (/CRE|REDE|UNIDADE|OPERACIONAL|DESEMPENHO/.test(normalized)) return "NETWORK";
+  return "GENERAL";
+}
+
+function reportLabels(locale: string) {
+  if (locale.startsWith("en")) return {
+    generated: "Generated at", summary: "Executive summary", patients: "Patients", units: "Active CRE units",
+    queue: "Active queue", sisreg: "Waiting SISREG approval", devices: "Active devices", recalls: "Active recalls",
+    reused: "Completed reuse matchings", damaged: "Damaged or expired devices", conformity: "Conformity rate", efficiency: "Efficiency rate",
+    finance: "Monthly financial execution", network: "CRE network", logistics: "Logistics and SISREG", lifecycle: "Lifecycle and reuse",
+    equity: "Equity and access", access: "Access matrix", noData: "No records available for this section.",
+  };
+  if (locale.startsWith("es")) return {
+    generated: "Generado el", summary: "Resumen ejecutivo", patients: "Pacientes", units: "Unidades CRE activas",
+    queue: "Cola activa", sisreg: "Esperando aprobación SISREG", devices: "Dispositivos activos", recalls: "Recalls activos",
+    reused: "Reutilizaciones concluidas", damaged: "Dispositivos dañados o vencidos", conformity: "Tasa de conformidad", efficiency: "Tasa de eficiencia",
+    finance: "Ejecución financiera mensual", network: "Red de CRE", logistics: "Logística y SISREG", lifecycle: "Ciclo de vida y reutilización",
+    equity: "Equidad y acceso", access: "Matriz de acceso", noData: "No hay registros disponibles para esta sección.",
+  };
+  return {
+    generated: "Gerado em", summary: "Resumo executivo", patients: "Pacientes", units: "Unidades CRE ativas",
+    queue: "Fila ativa", sisreg: "Aguardando aprovação SISREG", devices: "Dispositivos ativos", recalls: "Recalls ativos",
+    reused: "Reaproveitamentos concluídos", damaged: "Dispositivos danificados ou vencidos", conformity: "Taxa de conformidade", efficiency: "Taxa de eficiência",
+    finance: "Execução financeira mensal", network: "Rede de CREs", logistics: "Logística e SISREG", lifecycle: "Ciclo de vida e reaproveitamento",
+    equity: "Equidade e acesso", access: "Matriz de acesso", noData: "Não há registros disponíveis para esta seção.",
+  };
+}
+
+function managerReportRows(data: ManagerDashboardData, kind: ManagerReportKind): Array<Record<string, unknown>> {
+  if (kind === "FINANCE") return data.finance_monthly.map((row) => ({ record_type: "finance_month", ...row }));
+  if (kind === "LOGISTICS") return [
+    ...data.regional.map((row) => ({ record_type: "regional", ...row })),
+    ...data.logistics.map((row) => ({ record_type: "logistics_status", ...row })),
+  ];
+  if (kind === "LIFECYCLE") return [
+    ...data.lifecycle_alerts.map((row) => ({ record_type: "lifecycle_alert", ...row })),
+    ...data.recalls.map((row) => ({ record_type: "recall", ...row })),
+    ...(data.matches ?? []).map((row) => ({ record_type: "matching", ...row })),
+  ];
+  if (kind === "EQUITY") return data.equity_points.map((row) => ({ record_type: "equity", ...row }));
+  if (kind === "NETWORK") return data.centers.map((row) => ({ record_type: "cre", ...row }));
+  if (kind === "ACCESS_MATRIX") return (data.access_matrix ?? []).map((row) => ({ record_type: "access", ...row }));
+  return [
+    { record_type: "summary", ...data.summary, generated_at: data.generated_at },
+    ...data.monthly.map((row) => ({ record_type: "monthly", ...row })),
+  ];
+}
+
+function buildManagerReportLines(data: ManagerDashboardData, kind: ManagerReportKind, locale: string, title?: string): string[] {
+  const l = reportLabels(locale);
+  const defaultTitles: Record<ManagerReportKind, string> = {
+    GENERAL: l.summary, FINANCE: l.finance, LOGISTICS: l.logistics, LIFECYCLE: l.lifecycle,
+    EQUITY: l.equity, NETWORK: l.network, ACCESS_MATRIX: l.access,
+  };
+  const lines: string[] = [title || `REVITA - ${defaultTitles[kind]}`, `${l.generated}: ${formatDateTime(data.generated_at, locale)}`, ""];
+  const add = (heading: string, values: string[]) => {
+    lines.push(heading, ...values.map((value) => `  ${value}`), "");
+  };
+  if (kind === "GENERAL") {
+    add(l.summary, [
+      `${l.patients}: ${integer(data.summary.patients, locale)}`,
+      `${l.units}: ${integer(data.summary.active_units, locale)}`,
+      `${l.queue}: ${integer(data.summary.active_queue, locale)}`,
+      `${l.sisreg}: ${integer(data.summary.sisreg_pending, locale)}`,
+      `${l.devices}: ${integer(data.summary.active_devices, locale)}`,
+      `${l.recalls}: ${integer(data.summary.active_recalls, locale)}`,
+      `${l.reused}: ${integer(data.summary.reuse_matches, locale)}`,
+      `${l.damaged}: ${integer(data.summary.damaged_expired_devices, locale)}`,
+      `${l.conformity}: ${percent(data.summary.conformity_rate, locale)}`,
+      `${l.efficiency}: ${percent(data.summary.efficiency_rate, locale)}`,
+    ]);
+    add(l.network, data.centers.slice(0, 20).map((row) => `${row.name} | CNES ${row.cnes} | ${row.municipality}/${row.uf} | fila ${row.queue} | capacidade ${row.capacity}`));
+  } else if (kind === "FINANCE") {
+    add(l.finance, data.finance_monthly.length ? data.finance_monthly.map((row) => `${monthLabel(row.month, locale)} | próteses ${money(row.prostheses, locale)} | órteses ${money(row.orthoses, locale)} | cadeiras ${money(row.wheelchairs, locale)} | auditivos ${money(row.hearing, locale)}`) : [l.noData]);
+    add("Fornecedores / contratos", data.providers.length ? data.providers.slice(0, 30).map((row) => `${row.nome} | ${row.numero_contrato || "—"} | ${row.valor_total == null ? "—" : money(row.valor_total, locale)} | ${row.status}`) : [l.noData]);
+  } else if (kind === "LOGISTICS") {
+    add(l.logistics, [
+      `${l.queue}: ${integer(data.summary.active_queue, locale)}`,
+      `${l.sisreg}: ${integer(data.summary.sisreg_pending, locale)}`,
+      ...data.regional.map((row) => `${row.region} | estoque ${row.stock} | fila ${row.queue} | trânsito ${row.transit} | unidades ${row.units}`),
+    ]);
+    add("Status logístico", data.logistics.length ? data.logistics.map((row) => `${row.status}: ${row.count} registros / ${row.devices} dispositivos`) : [l.noData]);
+  } else if (kind === "LIFECYCLE") {
+    add(l.lifecycle, [
+      `${l.devices}: ${integer(data.summary.active_devices, locale)}`,
+      `${l.damaged}: ${integer(data.summary.damaged_expired_devices, locale)}`,
+      `${l.reused}: ${integer(data.summary.reuse_matches, locale)}`,
+      `${l.recalls}: ${integer(data.summary.active_recalls, locale)}`,
+    ]);
+    add("Recalls", data.recalls.length ? data.recalls.slice(0, 30).map((row) => `${row.codigo_lote} | ${row.nome_produto} | ${row.status} | ${formatDate(row.data_limite, locale)}`) : [l.noData]);
+    add("Matchings", (data.matches ?? []).length ? (data.matches ?? []).slice(0, 30).map((row) => `#${row.matching_id} | ${row.nome_produto} | ${row.cre_origem_nome || row.cre_origem_cnes} -> ${row.cre_destino_nome || row.cre_destino_cnes} | ${row.status}`) : [l.noData]);
+  } else if (kind === "NETWORK") {
+    add(l.network, data.centers.length ? data.centers.map((row) => `${row.name} | CNES ${row.cnes} | ${row.municipality}/${row.uf} | fila ${row.queue} | capacidade ${row.capacity} | remessas ${row.active_shipments} | ${row.active ? "ATIVO" : "INATIVO"}`) : [l.noData]);
+  } else if (kind === "EQUITY") {
+    add(l.equity, data.equity_points.length ? data.equity_points.map((row) => `${row.region} | ${row.zone} | distância ${row.distance_km} km | espera ${row.wait_days} dias`) : [l.noData]);
+  } else {
+    add(l.access, (data.access_matrix ?? []).length ? (data.access_matrix ?? []).map((row) => `${row.key} | paciente ${row.PACIENTE} | CRE ${row.FISCAL_CRE} | gestor ${row.GESTOR}`) : [l.noData]);
+  }
+  return lines;
+}
+
+function pdfAscii(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-").replace(/→/g, "->").replace(/•/g, "*")
+    .replace(/[^\x20-\x7E]/g, "?");
+}
+
+function wrapPdfLine(value: string, width = 92): string[] {
+  const clean = pdfAscii(value).trimEnd();
+  if (!clean) return [""];
+  const prefix = clean.startsWith("  ") ? "  " : "";
+  const words = clean.trim().split(/\s+/);
+  const out: string[] = [];
+  let line = prefix;
+  for (const word of words) {
+    if ((line + (line.trim() ? " " : "") + word).length > width && line.trim()) {
+      out.push(line);
+      line = `${prefix}${word}`;
+    } else {
+      line += `${line.trim() ? " " : ""}${word}`;
+    }
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+function downloadPdf(filename: string, reportLines: string[]) {
+  const lines = reportLines.flatMap((line) => wrapPdfLine(line));
+  const perPage = 52;
+  const pages = Array.from({ length: Math.max(1, Math.ceil(lines.length / perPage)) }, (_, index) => lines.slice(index * perPage, (index + 1) * perPage));
+  const objects: string[] = [];
+  const pageIds = pages.map((_, index) => 4 + index * 2);
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`;
+  objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  pages.forEach((pageLines, index) => {
+    const pageId = 4 + index * 2;
+    const contentId = pageId + 1;
+    const escape = (value: string) => value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    const textCommands = ["BT", "/F1 10 Tf", "48 794 Td", "13 TL"];
+    pageLines.forEach((line) => { textCommands.push(`(${escape(line)}) Tj`, "T*"); });
+    textCommands.push("T*", `(Pagina ${index + 1} de ${pages.length}) Tj`, "ET");
+    const stream = `${textCommands.join("\n")}\n`;
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentId} 0 R >>`;
+    objects[contentId] = `<< /Length ${stream.length} >>\nstream\n${stream}endstream`;
+  });
+  let pdf = "%PDF-1.4\n%REVITA\n";
+  const offsets: number[] = [0];
+  for (let id = 1; id < objects.length; id += 1) {
+    offsets[id] = pdf.length;
+    pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
+  }
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for (let id = 1; id < objects.length; id += 1) pdf += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  downloadText(filename, pdf, "application/pdf");
 }
 
 function statusTone(status: string): string {
@@ -493,11 +661,11 @@ function PaginaInicio({ data, onRefresh, onNavigate }: { data: ManagerDashboardD
           <RefreshCw size={13} />{t("manager.standard.actions.refresh")}
         </button>
         <div className="relative">
-          <button type="button" onClick={() => setAlertsOpen((value) => !value)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-lg px-3 py-2 hover:border-[#1565C0] transition-colors" aria-expanded={alertsOpen} aria-controls="manager-alerts-panel" aria-label={t("shell.navbar.notifications")}>
-            <Bell aria-hidden="true" size={13} />{t("manager.standard.actions.alertCount", { count: unreadBellAlerts })}
+          <button type="button" onClick={() => setAlertsOpen((value) => !value)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-lg px-3 py-2 hover:border-[#1565C0] transition-colors" aria-expanded={alertsOpen}>
+            <Bell size={13} />{t("manager.standard.actions.alertCount", { count: unreadBellAlerts })}
           </button>
-          {alertsOpen && <div id="manager-alerts-panel" role="region" aria-label={t("shell.accessibility.notificationsPanel")} className="fixed left-4 right-4 top-20 z-[90] overflow-hidden rounded-xl border border-border bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96">
-            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3"><div><p className="text-sm font-semibold text-foreground">{t("shell.navbar.recentAlerts")}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{t("shell.navbar.recentAlertsHint")}</p></div><button type="button" onClick={() => setAlertsOpen(false)} aria-label={t("shell.accessibility.close")} className="text-muted-foreground hover:text-foreground"><X size={15} aria-hidden="true" /></button></div>
+          {alertsOpen && <div className="fixed left-4 right-4 top-20 z-[90] overflow-hidden rounded-xl border border-border bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96">
+            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3"><div><p className="text-sm font-semibold text-foreground">{t("shell.navbar.recentAlerts")}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{t("shell.navbar.recentAlertsHint")}</p></div><button type="button" onClick={() => setAlertsOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={15} /></button></div>
             {bellAlerts.length ? <div className="max-h-80 divide-y divide-border overflow-y-auto">{bellAlerts.map((alert) => <button key={alert.id} type="button" onClick={() => { markSeen(alert.id); if (alert.notificationId) void marcarComoLida(alert.notificationId); setAlertsOpen(false); onNavigate(alert.target); }} className={`flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${alert.unread ? "bg-white" : "bg-slate-50/70"}`}><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${!alert.unread ? "bg-slate-300" : alert.severity === "critical" ? "bg-red-500" : alert.severity === "warning" ? "bg-amber-500" : "bg-blue-500"}`} /><span className="min-w-0"><span className={`block text-xs font-semibold ${alert.unread ? "text-foreground" : "text-muted-foreground"}`}>{alert.label}</span><span className={`mt-0.5 block text-[11px] line-clamp-2 ${alert.unread ? "text-muted-foreground" : "text-slate-400"}`}>{alert.message}</span><span className="mt-1 block text-[10px] text-muted-foreground/80">{alert.time}</span></span></button>)}</div> : <p className="px-4 py-6 text-center text-xs text-muted-foreground">{t("shell.navbar.noRecentAlerts")}</p>}
           </div>}
         </div>
@@ -635,10 +803,6 @@ function PaginaInicio({ data, onRefresh, onNavigate }: { data: ManagerDashboardD
   );
 }
 
-function downloadReportMetadata(report: ManagerReportRow) {
-  downloadText(`relatorio-${report.id}.json`, JSON.stringify(report, null, 2), "application/json;charset=utf-8");
-}
-
 function PaginaCREs({ data }: { data: ManagerDashboardData }) {
   const { t, locale } = useLang();
   const [search, setSearch] = useState("");
@@ -681,10 +845,9 @@ function PaginaCREs({ data }: { data: ManagerDashboardData }) {
         title={t("manager.standard.pages.creCenters.title")}
         subtitle={t("manager.standard.pages.creCenters.subtitle")}
       >
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-          <Building2 size={13} className="text-[#1565C0]" />
-          <span>{t("manager.standard.creCenters.sourceNote")}</span>
-        </div>
+        <button type="button" onClick={() => downloadPdf("relatorio-rede-cre.pdf", buildManagerReportLines(data, "NETWORK", locale))} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors">
+          <Download size={13} />{t("manager.standard.actions.downloadReport")}
+        </button>
       </PageHeader>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -780,7 +943,7 @@ function PaginaCREs({ data }: { data: ManagerDashboardData }) {
   );
 }
 
-function PaginaCicloVida({ data, onRefresh }: { data: ManagerDashboardData; onRefresh: () => void }) {
+function PaginaCicloVida({ data }: { data: ManagerDashboardData }) {
   const { t, locale } = useLang();
   const forecast = data.maintenance_forecast.map((row) => ({ ...row, mes: monthLabel(row.month, locale) }));
   const failureRate = numeric(data.summary.active_devices) ? (numeric(data.summary.active_recalls) / numeric(data.summary.active_devices)) * 100 : 0;
@@ -797,7 +960,7 @@ function PaginaCicloVida({ data, onRefresh }: { data: ManagerDashboardData; onRe
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader breadcrumb={t("manager.standard.pages.lifecycle.breadcrumb")} title={t("manager.standard.pages.lifecycle.title")} subtitle={t("manager.standard.pages.lifecycle.subtitle")}>
-        <button onClick={onRefresh} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><RefreshCw size={13} />{t("manager.standard.actions.refreshData")}</button>
+        <button type="button" onClick={() => downloadPdf("relatorio-ciclo-de-vida.pdf", buildManagerReportLines(data, "LIFECYCLE", locale))} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><FileBarChart size={13} />{t("manager.standard.actions.generateReport")}</button>
       </PageHeader>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
@@ -991,6 +1154,23 @@ function PaginaRelatorios({ data }: { data: ManagerDashboardData }) {
     if (filters.tipoRelatorio === "NETWORK") return downloadCsv("umdr-rede-cre.csv", data.centers.map((row) => ({ ...row, ...common })));
     return downloadCsv("umdr-relatorios.csv", reports.map((report) => ({ ...report, ...common })));
   };
+  const selectedKind: ManagerReportKind = filters.tipoRelatorio === "FINANCE" ? "FINANCE"
+    : filters.tipoRelatorio === "LOGISTICS" ? "LOGISTICS"
+      : filters.tipoRelatorio === "LIFECYCLE" ? "LIFECYCLE"
+        : filters.tipoRelatorio === "EQUITY" ? "EQUITY"
+          : filters.tipoRelatorio === "NETWORK" ? "NETWORK"
+            : filters.tipoRelatorio === "ACCESS_MATRIX" ? "ACCESS_MATRIX" : "GENERAL";
+  const downloadSelectedPdf = () => downloadPdf("relatorio-manager.pdf", buildManagerReportLines(data, selectedKind, locale));
+  const downloadStoredReport = (report: ManagerReportRow) => {
+    const kind = managerReportKindFromText(`${report.tipo} ${report.nome}`);
+    const rows = managerReportRows(data, kind);
+    if (String(report.formato).toUpperCase() === "CSV") {
+      downloadCsv(`relatorio-${report.id}.csv`, rows);
+      return;
+    }
+    downloadPdf(`relatorio-${report.id}.pdf`, buildManagerReportLines(data, kind, locale, report.nome));
+  };
+  const previewLines = preview ? buildManagerReportLines(data, managerReportKindFromText(`${preview.tipo} ${preview.nome}`), locale, preview.nome) : [];
   const shareReport = async (report: ManagerReportRow) => {
     const shareText = `${report.nome} — ${report.tipo} — ${formatDate(report.gerado_em, locale)}`;
     if (navigator.share) await navigator.share({ title: report.nome, text: shareText });
@@ -1007,7 +1187,7 @@ function PaginaRelatorios({ data }: { data: ManagerDashboardData }) {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex items-center gap-3 bg-[#0A1929]/5 border border-[#0A1929]/10 rounded-lg px-4 py-3 mb-6"><Lock size={13} className="text-[#1565C0] shrink-0" /><p className="text-xs text-muted-foreground"><strong className="text-foreground">{t("manager.standard.security.managerLevel")}</strong>{" "}{t("manager.standard.security.lgpd")}</p></div>
-      <PageHeader breadcrumb={t("manager.standard.pages.reports.breadcrumb")} title={t("manager.standard.pages.reports.title")} subtitle={t("manager.standard.pages.reports.subtitle")}><button onClick={exportRows} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><BarChart3 size={13} />{t("manager.standard.actions.generateReport")}</button></PageHeader>
+      <PageHeader breadcrumb={t("manager.standard.pages.reports.breadcrumb")} title={t("manager.standard.pages.reports.title")} subtitle={t("manager.standard.pages.reports.subtitle")}><button onClick={downloadSelectedPdf} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><BarChart3 size={13} />{t("manager.standard.actions.generateReport")}</button></PageHeader>
 
       <Card className="p-5 mb-6">
         <div className="flex items-center gap-2 mb-4"><Filter size={14} className="text-[#1565C0]" /><h2 className="text-sm font-semibold text-foreground">{t("manager.standard.reports.filtersTitle")}</h2></div>
@@ -1019,7 +1199,7 @@ function PaginaRelatorios({ data }: { data: ManagerDashboardData }) {
           <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("manager.standard.reports.deviceCategory")}</label><select value={filters.categoria} onChange={(event) => setFilters((current) => ({ ...current, categoria: event.target.value }))} className="w-full text-xs text-foreground bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:border-[#1565C0] transition-colors appearance-none"><option value="ALL">{t("manager.standard.reports.all")}</option><option value="PROSTHESES">{t("manager.standard.finance.prostheses")}</option><option value="ORTHOSES">{t("manager.standard.finance.orthoses")}</option><option value="WHEELCHAIRS">{t("manager.standard.finance.wheelchairs")}</option><option value="HEARING">{t("manager.standard.finance.hearingAids")}</option></select></div>
           <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("manager.standard.reports.qualityIndicator")}</label><select value={filters.indicador} onChange={(event) => setFilters((current) => ({ ...current, indicador: event.target.value }))} className="w-full text-xs text-foreground bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:border-[#1565C0] transition-colors appearance-none"><option value="ALL">{t("manager.standard.reports.all")}</option><option value="CONFORMITY">{t("manager.standard.executive.conformity")}</option><option value="LEAD_TIME">{t("manager.standard.logistics.averageLeadTime")}</option><option value="EQUITY">{t("manager.standard.nav.equity")}</option><option value="SLA">{t("manager.standard.finance.averageSla")}</option></select></div>
         </div>
-        <div className="flex flex-wrap items-center gap-3 mt-5 pt-4 border-t border-border"><button onClick={exportRows} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><BarChart3 size={13} />{t("manager.standard.actions.generateFullReport")}</button><button onClick={exportRows} className="flex items-center gap-2 text-xs font-medium text-foreground bg-muted border border-border rounded-lg px-4 py-2 hover:bg-muted/80 transition-colors"><Download size={13} />{t("manager.standard.actions.exportCsv")}</button><button onClick={() => window.print()} className="flex items-center gap-2 text-xs font-medium text-foreground bg-muted border border-border rounded-lg px-4 py-2 hover:bg-muted/80 transition-colors"><Download size={13} />{t("manager.standard.actions.exportPdf")}</button></div>
+        <div className="flex flex-wrap items-center gap-3 mt-5 pt-4 border-t border-border"><button onClick={downloadSelectedPdf} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><BarChart3 size={13} />{t("manager.standard.actions.generateFullReport")}</button><button onClick={exportRows} className="flex items-center gap-2 text-xs font-medium text-foreground bg-muted border border-border rounded-lg px-4 py-2 hover:bg-muted/80 transition-colors"><Download size={13} />{t("manager.standard.actions.exportCsv")}</button><button onClick={downloadSelectedPdf} className="flex items-center gap-2 text-xs font-medium text-foreground bg-muted border border-border rounded-lg px-4 py-2 hover:bg-muted/80 transition-colors"><Download size={13} />{t("manager.standard.actions.exportPdf")}</button></div>
       </Card>
 
       {(filters.tipoRelatorio === "ALL" || filters.tipoRelatorio === "ACCESS_MATRIX") && <Card className="overflow-hidden mb-6">
@@ -1071,10 +1251,10 @@ function PaginaRelatorios({ data }: { data: ManagerDashboardData }) {
 
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border"><h2 className="text-sm font-semibold text-foreground">{t("manager.standard.reports.recentTitle")}</h2><div className="flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays size={13} /><span>{t("manager.standard.reports.lastThirtyDays")}</span></div></div>
-        {reports.length ? <div className="divide-y divide-border">{reports.map((report) => <div key={report.id} className="flex flex-col gap-4 px-5 py-4 hover:bg-muted/30 transition-colors lg:flex-row lg:items-center"><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0"><FileBarChart size={15} className="text-muted-foreground" /></div><div className="flex-1 min-w-0"><p className="text-sm font-medium text-foreground truncate">{report.nome}</p><div className="flex flex-wrap items-center gap-3 mt-0.5"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeTone(report.tipo)}`}>{report.tipo}</span><span className="text-xs text-muted-foreground">{formatDate(report.gerado_em, locale)}</span><span className="text-xs text-muted-foreground font-mono">{formatBytes(report.tamanho_bytes, locale)}</span></div></div><div className="flex items-center gap-2 shrink-0"><button onClick={() => setPreview(report)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"><Eye size={12} />{t("manager.standard.actions.view")}</button><button onClick={() => void shareReport(report)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"><Share2 size={12} />{t("manager.standard.actions.share")}</button><button onClick={() => downloadReportMetadata(report)} className="flex items-center gap-1.5 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-3 py-1.5 hover:bg-[#1976D2] transition-colors"><Download size={12} />{t("manager.standard.actions.download")}</button></div></div>)}</div> : <EmptyState message={t("manager.standard.empty.reports")} />}
+        {reports.length ? <div className="divide-y divide-border">{reports.map((report) => <div key={report.id} className="flex flex-col gap-4 px-5 py-4 hover:bg-muted/30 transition-colors lg:flex-row lg:items-center"><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0"><FileBarChart size={15} className="text-muted-foreground" /></div><div className="flex-1 min-w-0"><p className="text-sm font-medium text-foreground truncate">{report.nome}</p><div className="flex flex-wrap items-center gap-3 mt-0.5"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeTone(report.tipo)}`}>{report.tipo}</span><span className="text-xs text-muted-foreground">{formatDate(report.gerado_em, locale)}</span><span className="text-xs text-muted-foreground font-mono">{formatBytes(report.tamanho_bytes, locale)}</span></div></div><div className="flex items-center gap-2 shrink-0"><button onClick={() => setPreview(report)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"><Eye size={12} />{t("manager.standard.actions.view")}</button><button onClick={() => void shareReport(report)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"><Share2 size={12} />{t("manager.standard.actions.share")}</button><button onClick={() => downloadStoredReport(report)} className="flex items-center gap-1.5 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-3 py-1.5 hover:bg-[#1976D2] transition-colors"><Download size={12} />{t("manager.standard.actions.download")}</button></div></div>)}</div> : <EmptyState message={t("manager.standard.empty.reports")} />}
       </Card>
 
-      {preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onClick={() => setPreview(null)}><div className="w-full max-w-xl" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}><Card className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-[#1565C0]">{preview.tipo}</p><h3 className="text-lg font-semibold text-foreground mt-1">{preview.nome}</h3></div><button onClick={() => setPreview(null)} className="text-muted-foreground hover:text-foreground"><XCircle size={20} /></button></div><dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 text-xs"><div><dt className="text-muted-foreground">{t("manager.standard.reports.generatedAt")}</dt><dd className="font-medium text-foreground mt-1">{formatDateTime(preview.gerado_em, locale)}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.format")}</dt><dd className="font-medium text-foreground mt-1">{preview.formato}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.size")}</dt><dd className="font-medium text-foreground mt-1">{formatBytes(preview.tamanho_bytes, locale)}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.path")}</dt><dd className="font-medium text-foreground mt-1 break-all">{text(preview.caminho_arquivo)}</dd></div></dl><div className="flex flex-col-reverse gap-2 mt-6 sm:flex-row sm:justify-end"><button onClick={() => setPreview(null)} className="text-xs font-medium px-4 py-2 rounded-lg border border-border">{t("manager.standard.actions.close")}</button><button onClick={() => downloadReportMetadata(preview)} className="text-xs font-medium px-4 py-2 rounded-lg bg-[#1565C0] text-white">{t("manager.standard.actions.download")}</button></div></Card></div></div>}
+      {preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onClick={() => setPreview(null)}><div className="w-full max-w-3xl" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}><Card className="overflow-hidden"><div className="flex items-start justify-between gap-4 border-b border-border p-5"><div><p className="text-xs uppercase tracking-widest text-[#1565C0]">{preview.tipo}</p><h3 className="mt-1 text-lg font-semibold text-foreground">{preview.nome}</h3><p className="mt-1 text-xs text-muted-foreground">{t("manager.standard.reports.generatedAt")}: {formatDateTime(preview.gerado_em, locale)}</p></div><button onClick={() => setPreview(null)} className="text-muted-foreground hover:text-foreground" aria-label={t("manager.standard.actions.close")}><XCircle size={20} /></button></div><div className="max-h-[65vh] overflow-y-auto bg-slate-50 p-5"><div className="mx-auto max-w-2xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm"><pre className="whitespace-pre-wrap break-words font-sans text-xs leading-6 text-slate-700">{previewLines.join("\n")}</pre></div></div><div className="flex flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:justify-end"><button onClick={() => setPreview(null)} className="text-xs font-medium px-4 py-2 rounded-lg border border-border">{t("manager.standard.actions.close")}</button><button onClick={() => downloadStoredReport(preview)} className="text-xs font-medium px-4 py-2 rounded-lg bg-[#1565C0] text-white">{String(preview.formato).toUpperCase() === "CSV" ? t("manager.standard.actions.exportCsv") : t("manager.standard.actions.downloadPdf")}</button></div></Card></div></div>}
     </div>
   );
 }
@@ -1394,7 +1574,6 @@ export function ManagerHomePage() {
     comunicacoes: { title: t("manager.standard.pages.communications.title"), subtitle: t("manager.standard.pages.communications.subtitle") },
     cadastros: { title: t("manager.standard.pages.registrations.title"), subtitle: t("manager.standard.pages.registrations.subtitle") },
   };
-  useAccessiblePage(pageMeta[activePage].title, pageMeta[activePage].subtitle);
 
   if (dashboard.loading && !dashboard.data) return <LoadingState message={t("manager.common.loading")} />;
   if (dashboard.error || !dashboard.data) return <ErrorState message={dashboard.error ?? t("manager.common.error")} retryLabel={t("manager.common.retry")} onRetry={dashboard.reload} />;
@@ -1406,18 +1585,18 @@ export function ManagerHomePage() {
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden" style={{ fontFamily: "Inter, DM Sans, sans-serif", background: "#F8F9FA" }}>
       {mobileNavOpen && <button type="button" aria-label="Fechar menu" className="fixed inset-0 z-40 bg-slate-950/35 lg:hidden" onClick={() => setMobileNavOpen(false)} />}
-      <aside id="manager-sidebar" aria-label={t("shell.accessibility.mainNavigation")} className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-white border-r border-slate-200 shadow-xl transition-transform lg:static lg:z-auto lg:w-56 lg:translate-x-0 lg:shadow-none ${mobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-white border-r border-slate-200 shadow-xl transition-transform lg:static lg:z-auto lg:w-56 lg:translate-x-0 lg:shadow-none ${mobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-5 pt-6 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-2.5"><div className="w-8 h-8 rounded-lg bg-[#1565C0] flex items-center justify-center shrink-0"><Activity size={15} className="text-white" /></div><div><p className="text-slate-900 text-xs font-semibold leading-tight">{t("manager.standard.brand")}</p><p className="text-slate-400 text-[10px] leading-tight">{t("manager.standard.brandFull")}</p></div></div>
         </div>
 
-        <div className="px-4 py-3"><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><Search size={12} className="text-slate-400" /><input aria-label={t("manager.standard.search")} value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder={t("manager.standard.search")} className="w-full bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none" /></div></div>
+        <div className="px-4 py-3"><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><Search size={12} className="text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="text" placeholder={t("manager.standard.search")} className="w-full bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none" /></div></div>
 
-        <nav aria-label={t("shell.accessibility.mainNavigation")} className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase px-2 py-2">{t("manager.standard.mainMenu")}</p>
           {filteredNavItems.map((item) => {
             const isActive = activePage === item.id;
-            return <button key={item.id} aria-current={isActive ? "page" : undefined} onClick={() => { setActivePage(item.id); setMobileNavOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm font-medium ${isActive ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}><item.icon aria-hidden="true" size={16} className={isActive ? "text-blue-600" : "text-slate-400"} /><span className="leading-tight">{item.label}</span>{isActive && <ChevronRight size={14} className="ml-auto text-blue-400" />}</button>;
+            return <button key={item.id} onClick={() => { setActivePage(item.id); setMobileNavOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm font-medium ${isActive ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}><item.icon size={16} className={isActive ? "text-blue-600" : "text-slate-400"} /><span className="leading-tight">{item.label}</span>{isActive && <ChevronRight size={14} className="ml-auto text-blue-400" />}</button>;
           })}
         </nav>
 
@@ -1431,10 +1610,10 @@ export function ManagerHomePage() {
         </div>
       </aside>
 
-      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="min-h-14 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 shrink-0 relative">
           <div className="flex min-w-0 items-center gap-3">
-            <button type="button" onClick={() => setMobileNavOpen(true)} aria-controls="manager-sidebar" aria-expanded={mobileNavOpen} className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" aria-label="Abrir menu"><Menu size={18} /></button>
+            <button type="button" onClick={() => setMobileNavOpen(true)} className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" aria-label="Abrir menu"><Menu size={18} /></button>
             <div className="min-w-0">
               <h1 className="truncate text-sm sm:text-base font-bold text-slate-900">{pageMeta[activePage].title}</h1>
               <p className="hidden sm:block truncate text-xs text-slate-400 font-medium">{pageMeta[activePage].subtitle}</p>
@@ -1448,7 +1627,6 @@ export function ManagerHomePage() {
                 onClick={() => setProfileOpen((value) => !value)}
                 className="w-8 h-8 rounded-full bg-[#1565C0] flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
                 aria-expanded={profileOpen}
-                aria-label={t("shell.navbar.myProfile")}
               >
                 {initials}
               </button>
@@ -1463,7 +1641,7 @@ export function ManagerHomePage() {
                           <p className="truncate text-sm font-bold">{managerName}</p>
                           <p className="text-xs text-white/75">{t("manager.standard.executiveAccess")}</p>
                         </div>
-                        <button type="button" onClick={() => setProfileOpen(false)} aria-label={t("shell.accessibility.close")} className="ml-auto text-white/70 hover:text-white"><X size={15} aria-hidden="true" /></button>
+                        <button type="button" onClick={() => setProfileOpen(false)} className="ml-auto text-white/70 hover:text-white"><X size={15} /></button>
                       </div>
                     </div>
                     <div className="divide-y divide-border px-4 py-1">
@@ -1486,7 +1664,7 @@ export function ManagerHomePage() {
         <div className="flex-1 overflow-y-auto">
           {activePage === "inicio" && <PaginaInicio data={data} onRefresh={dashboard.reload} onNavigate={setActivePage} />}
           {activePage === "cres" && <PaginaCREs data={data} />}
-          {activePage === "ciclovida" && <PaginaCicloVida data={data} onRefresh={dashboard.reload} />}
+          {activePage === "ciclovida" && <PaginaCicloVida data={data} />}
           {activePage === "logistica" && <PaginaLogistica data={data} />}
           {activePage === "financas" && <PaginaFinancas data={data} />}
           {activePage === "equidade" && <PaginaEquidade data={data} />}

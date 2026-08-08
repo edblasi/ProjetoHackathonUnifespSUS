@@ -3119,8 +3119,14 @@ async def _alert_recipients(payload: AlertCreate, identity: Identity) -> list[di
             raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
         if payload.audiencia == "UNIT_STAFF":
             return [user for user in users if user.get("cnes_vinculo") == identity.cnes_vinculo and user.get("papel") in {"FISCAL_CRE", "GESTOR"}]
-        requests = await db_select("fila", "solicitacao_ortese", select="paciente_id", filters={"estabelecimento_solicitante_cnes": f"eq.{identity.cnes_vinculo}"}, limit=5000)
-        patient_ids = {row.get("paciente_id") for row in requests}
+        linked_patients = await db_select(
+            "fila",
+            "vw_pacientes_cre",
+            select="paciente_id",
+            filters={"cre_destino_cnes": f"eq.{str(identity.cnes_vinculo).strip()}"},
+            limit=5000,
+        )
+        patient_ids = {row.get("paciente_id") for row in linked_patients if row.get("paciente_id") is not None}
         return [user for user in users if user.get("papel") == "PACIENTE" and user.get("paciente_id") in patient_ids]
 
     require_roles(identity, "GESTOR")

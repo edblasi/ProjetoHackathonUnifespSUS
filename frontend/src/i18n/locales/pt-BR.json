@@ -454,21 +454,6 @@
       "saved": "Configurações atualizadas com sucesso.",
       "saving": "Salvando...",
       "save": "Salvar alterações"
-    },
-    "accessibility": {
-      "skipToContent": "Ir para o conteúdo principal",
-      "pageReady": "Página {title} carregada.",
-      "pageReadyWithDescription": "Página {title} carregada. {description}",
-      "mainNavigation": "Navegação principal",
-      "notificationsPanel": "Painel de notificações",
-      "profileMenu": "Menu do perfil",
-      "close": "Fechar",
-      "patientPortal": "Portal do paciente",
-      "showPassword": "Mostrar senha",
-      "hidePassword": "Ocultar senha",
-      "refresh": "Atualizar",
-      "unread": "Não lida",
-      "read": "Lida"
     }
   },
   "home": {
@@ -1075,8 +1060,8 @@
         "exportFinance": "Exportar financeiro",
         "exportPdf": "Exportar PDF",
         "generateFullReport": "Gerar relatório completo",
-        "refreshData": "Atualizar dados",
-        "save": "Salvar"
+        "save": "Salvar",
+        "downloadReport": "Baixar relatório"
       },
       "pages": {
         "executive": {
@@ -1446,7 +1431,6 @@
         "waitingPatients": "Pacientes aguardando",
         "capacity": "Capacidade mensal",
         "monthlyCapacity": "Capacidade de produção cadastrada",
-        "sourceNote": "Dados consolidados do CNES e da rede OPM",
         "regionalDistribution": "Distribuição regional",
         "regionalSubtitle": "CREs ativos por região do Brasil",
         "directory": "Diretório de CREs",
