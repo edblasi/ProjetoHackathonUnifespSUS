@@ -454,6 +454,21 @@
       "saved": "Configurações atualizadas com sucesso.",
       "saving": "Salvando...",
       "save": "Salvar alterações"
+    },
+    "accessibility": {
+      "skipToContent": "Ir para o conteúdo principal",
+      "pageReady": "Página {title} carregada.",
+      "pageReadyWithDescription": "Página {title} carregada. {description}",
+      "mainNavigation": "Navegação principal",
+      "notificationsPanel": "Painel de notificações",
+      "profileMenu": "Menu do perfil",
+      "close": "Fechar",
+      "patientPortal": "Portal do paciente",
+      "showPassword": "Mostrar senha",
+      "hidePassword": "Ocultar senha",
+      "refresh": "Atualizar",
+      "unread": "Não lida",
+      "read": "Lida"
     }
   },
   "home": {

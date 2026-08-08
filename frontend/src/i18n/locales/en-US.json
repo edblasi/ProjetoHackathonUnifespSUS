@@ -454,6 +454,21 @@
       "saved": "Settings updated successfully.",
       "saving": "Saving...",
       "save": "Save changes"
+    },
+    "accessibility": {
+      "skipToContent": "Skip to main content",
+      "pageReady": "{title} page loaded.",
+      "pageReadyWithDescription": "{title} page loaded. {description}",
+      "mainNavigation": "Main navigation",
+      "notificationsPanel": "Notifications panel",
+      "profileMenu": "Profile menu",
+      "close": "Close",
+      "patientPortal": "Patient portal",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "refresh": "Refresh",
+      "unread": "Unread",
+      "read": "Read"
     }
   },
   "home": {
