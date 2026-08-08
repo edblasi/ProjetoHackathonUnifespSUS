@@ -23,6 +23,7 @@ import {
   LogOut,
   Mail,
   MapPin,
+  Menu,
   Package,
   RefreshCw,
   Scale,
@@ -60,6 +61,7 @@ import {
 import { Card } from "../components/Card";
 import { DashboardCustomizer, useDashboardCardPreferences } from "../components/DashboardCustomizer";
 import { LanguageToggle } from "../components/LanguageToggle";
+import { useAccessiblePage } from "../components/Accessibility";
 import { SettingsModal } from "../components/SettingsModal";
 import { CommunicationsCenter } from "../components/CommunicationsCenter";
 import { EmptyState, ErrorState, LoadingState } from "../components/DataState";
@@ -351,7 +353,7 @@ function PaginaInicio({ data, onRefresh, onNavigate }: { data: ManagerDashboardD
   }));
   const alerts = data.alerts.slice(0, 4);
   const bellAlerts = [
-    ...(personalNotifications ?? []).slice(0, 5).map((item) => {
+    ...(personalNotifications ?? []).filter((item) => item.referencia_tabela !== "producao.matching_dispositivo").slice(0, 5).map((item) => {
       const id = `notification-${item.id}`;
       return {
         id,
@@ -480,7 +482,7 @@ function PaginaInicio({ data, onRefresh, onNavigate }: { data: ManagerDashboardD
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader
         breadcrumb={t("manager.standard.brandFull")}
         title={t("manager.standard.pages.executive.title")}
@@ -491,11 +493,11 @@ function PaginaInicio({ data, onRefresh, onNavigate }: { data: ManagerDashboardD
           <RefreshCw size={13} />{t("manager.standard.actions.refresh")}
         </button>
         <div className="relative">
-          <button type="button" onClick={() => setAlertsOpen((value) => !value)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-lg px-3 py-2 hover:border-[#1565C0] transition-colors" aria-expanded={alertsOpen}>
-            <Bell size={13} />{t("manager.standard.actions.alertCount", { count: unreadBellAlerts })}
+          <button type="button" onClick={() => setAlertsOpen((value) => !value)} className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-card border border-border rounded-lg px-3 py-2 hover:border-[#1565C0] transition-colors" aria-expanded={alertsOpen} aria-controls="manager-alerts-panel" aria-label={t("shell.navbar.notifications")}>
+            <Bell aria-hidden="true" size={13} />{t("manager.standard.actions.alertCount", { count: unreadBellAlerts })}
           </button>
-          {alertsOpen && <div className="absolute right-0 top-11 z-[90] w-96 overflow-hidden rounded-xl border border-border bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3"><div><p className="text-sm font-semibold text-foreground">{t("shell.navbar.recentAlerts")}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{t("shell.navbar.recentAlertsHint")}</p></div><button type="button" onClick={() => setAlertsOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={15} /></button></div>
+          {alertsOpen && <div id="manager-alerts-panel" role="region" aria-label={t("shell.accessibility.notificationsPanel")} className="fixed left-4 right-4 top-20 z-[90] overflow-hidden rounded-xl border border-border bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-96">
+            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3"><div><p className="text-sm font-semibold text-foreground">{t("shell.navbar.recentAlerts")}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{t("shell.navbar.recentAlertsHint")}</p></div><button type="button" onClick={() => setAlertsOpen(false)} aria-label={t("shell.accessibility.close")} className="text-muted-foreground hover:text-foreground"><X size={15} aria-hidden="true" /></button></div>
             {bellAlerts.length ? <div className="max-h-80 divide-y divide-border overflow-y-auto">{bellAlerts.map((alert) => <button key={alert.id} type="button" onClick={() => { markSeen(alert.id); if (alert.notificationId) void marcarComoLida(alert.notificationId); setAlertsOpen(false); onNavigate(alert.target); }} className={`flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${alert.unread ? "bg-white" : "bg-slate-50/70"}`}><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${!alert.unread ? "bg-slate-300" : alert.severity === "critical" ? "bg-red-500" : alert.severity === "warning" ? "bg-amber-500" : "bg-blue-500"}`} /><span className="min-w-0"><span className={`block text-xs font-semibold ${alert.unread ? "text-foreground" : "text-muted-foreground"}`}>{alert.label}</span><span className={`mt-0.5 block text-[11px] line-clamp-2 ${alert.unread ? "text-muted-foreground" : "text-slate-400"}`}>{alert.message}</span><span className="mt-1 block text-[10px] text-muted-foreground/80">{alert.time}</span></span></button>)}</div> : <p className="px-4 py-6 text-center text-xs text-muted-foreground">{t("shell.navbar.noRecentAlerts")}</p>}
           </div>}
         </div>
@@ -504,7 +506,7 @@ function PaginaInicio({ data, onRefresh, onNavigate }: { data: ManagerDashboardD
         </button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4 mb-8">
         {visibleKpiCards.map((item) => <KPICard key={item.id} {...item} onClick={() => item.target && onNavigate(item.target)} />)}
       </div>
 
@@ -673,7 +675,7 @@ function PaginaCREs({ data }: { data: ManagerDashboardData }) {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader
         breadcrumb={t("manager.standard.pages.creCenters.breadcrumb")}
         title={t("manager.standard.pages.creCenters.title")}
@@ -685,7 +687,7 @@ function PaginaCREs({ data }: { data: ManagerDashboardData }) {
         </div>
       </PageHeader>
 
-      <div className="grid grid-cols-2 gap-4 mb-8 sm:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {kpis.map((item) => <KPICard key={item.label} {...item} />)}
       </div>
 
@@ -793,12 +795,12 @@ function PaginaCicloVida({ data, onRefresh }: { data: ManagerDashboardData; onRe
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader breadcrumb={t("manager.standard.pages.lifecycle.breadcrumb")} title={t("manager.standard.pages.lifecycle.title")} subtitle={t("manager.standard.pages.lifecycle.subtitle")}>
         <button onClick={onRefresh} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><RefreshCw size={13} />{t("manager.standard.actions.refreshData")}</button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
 
       <Card className="p-5 mb-6">
         <div className="flex items-center justify-between mb-5"><div><h2 className="text-sm font-semibold text-foreground">{t("manager.standard.lifecycle.forecastTitle")}</h2><p className="text-xs text-muted-foreground">{t("manager.standard.lifecycle.forecastSubtitle")}</p></div></div>
@@ -841,12 +843,12 @@ function PaginaLogistica({ data }: { data: ManagerDashboardData }) {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader breadcrumb={t("manager.standard.pages.logistics.breadcrumb")} title={t("manager.standard.pages.logistics.title")} subtitle={t("manager.standard.pages.logistics.subtitle")}>
         <button onClick={() => downloadCsv("umdr-sisreg-logistica.csv", data.regional)} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><Download size={13} />{t("manager.standard.actions.exportSisreg")}</button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
 
       <Card className="p-5 mb-6">
         <div className="flex items-center justify-between mb-5"><div><h2 className="text-sm font-semibold text-foreground">{t("manager.standard.logistics.regionalTitle")}</h2><p className="text-xs text-muted-foreground">{t("manager.standard.logistics.regionalSubtitle")}</p></div>{data.regional.some((row) => row.queue > row.stock) && <span className="text-xs font-medium text-[#C62828] bg-red-50 px-2 py-0.5 rounded-full">{t("manager.standard.logistics.criticalRegion")}</span>}</div>
@@ -880,12 +882,12 @@ function PaginaFinancas({ data }: { data: ManagerDashboardData }) {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader breadcrumb={t("manager.standard.pages.finance.breadcrumb")} title={t("manager.standard.pages.finance.title")} subtitle={t("manager.standard.pages.finance.subtitle")}>
         <button onClick={() => downloadCsv("umdr-financeiro.csv", data.finance_monthly)} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><Download size={13} />{t("manager.standard.actions.exportFinance")}</button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
 
       <Card className="p-5 mb-6">
         <div className="flex items-center justify-between mb-5"><div><h2 className="text-sm font-semibold text-foreground">{t("manager.standard.finance.spendingByDevice")}</h2><p className="text-xs text-muted-foreground">{t("manager.standard.finance.spendingByDeviceSubtitle")}</p></div></div>
@@ -919,12 +921,12 @@ function PaginaEquidade({ data }: { data: ManagerDashboardData }) {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader breadcrumb={t("manager.standard.pages.equity.breadcrumb")} title={t("manager.standard.pages.equity.title")} subtitle={t("manager.standard.pages.equity.subtitle")}>
         <button onClick={() => downloadCsv("umdr-equidade.csv", data.equity_points)} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><Download size={13} />{t("manager.standard.actions.equityReport")}</button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">{kpis.map((item) => <KPICard key={item.label} {...item} />)}</div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <Card className="xl:col-span-2 p-5">
@@ -1003,13 +1005,13 @@ function PaginaRelatorios({ data }: { data: ManagerDashboardData }) {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex items-center gap-3 bg-[#0A1929]/5 border border-[#0A1929]/10 rounded-lg px-4 py-3 mb-6"><Lock size={13} className="text-[#1565C0] shrink-0" /><p className="text-xs text-muted-foreground"><strong className="text-foreground">{t("manager.standard.security.managerLevel")}</strong>{" "}{t("manager.standard.security.lgpd")}</p></div>
       <PageHeader breadcrumb={t("manager.standard.pages.reports.breadcrumb")} title={t("manager.standard.pages.reports.title")} subtitle={t("manager.standard.pages.reports.subtitle")}><button onClick={exportRows} className="flex items-center gap-2 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-4 py-2 hover:bg-[#1976D2] transition-colors"><BarChart3 size={13} />{t("manager.standard.actions.generateReport")}</button></PageHeader>
 
       <Card className="p-5 mb-6">
         <div className="flex items-center gap-2 mb-4"><Filter size={14} className="text-[#1565C0]" /><h2 className="text-sm font-semibold text-foreground">{t("manager.standard.reports.filtersTitle")}</h2></div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("manager.standard.reports.reportType")}</label><select value={filters.tipoRelatorio} onChange={(event) => setFilters((current) => ({ ...current, tipoRelatorio: event.target.value }))} className="w-full text-xs text-foreground bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:border-[#1565C0] transition-colors appearance-none"><option value="ALL">{t("manager.standard.reports.reportTypes.all")}</option><option value="GENERAL">{t("manager.standard.reports.reportTypes.general")}</option><option value="FINANCE">{t("manager.standard.reports.reportTypes.finance")}</option><option value="ACCESS_MATRIX">{t("manager.standard.reports.reportTypes.accessMatrix")}</option><option value="LOGISTICS">{t("manager.standard.reports.reportTypes.logistics")}</option><option value="LIFECYCLE">{t("manager.standard.reports.reportTypes.lifecycle")}</option><option value="EQUITY">{t("manager.standard.reports.reportTypes.equity")}</option><option value="NETWORK">{t("manager.standard.reports.reportTypes.network")}</option></select></div>
           <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("manager.standard.reports.startDate")}</label><input type="date" value={filters.dataInicio} onChange={(event) => setFilters((current) => ({ ...current, dataInicio: event.target.value }))} className="w-full text-xs text-foreground bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:border-[#1565C0] transition-colors" /></div>
           <div><label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("manager.standard.reports.endDate")}</label><input type="date" value={filters.dataFim} onChange={(event) => setFilters((current) => ({ ...current, dataFim: event.target.value }))} className="w-full text-xs text-foreground bg-muted border border-border rounded-lg px-3 py-2 outline-none focus:border-[#1565C0] transition-colors" /></div>
@@ -1072,7 +1074,7 @@ function PaginaRelatorios({ data }: { data: ManagerDashboardData }) {
         {reports.length ? <div className="divide-y divide-border">{reports.map((report) => <div key={report.id} className="flex flex-col gap-4 px-5 py-4 hover:bg-muted/30 transition-colors lg:flex-row lg:items-center"><div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0"><FileBarChart size={15} className="text-muted-foreground" /></div><div className="flex-1 min-w-0"><p className="text-sm font-medium text-foreground truncate">{report.nome}</p><div className="flex flex-wrap items-center gap-3 mt-0.5"><span className={`text-xs font-medium px-2 py-0.5 rounded-full ${typeTone(report.tipo)}`}>{report.tipo}</span><span className="text-xs text-muted-foreground">{formatDate(report.gerado_em, locale)}</span><span className="text-xs text-muted-foreground font-mono">{formatBytes(report.tamanho_bytes, locale)}</span></div></div><div className="flex items-center gap-2 shrink-0"><button onClick={() => setPreview(report)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"><Eye size={12} />{t("manager.standard.actions.view")}</button><button onClick={() => void shareReport(report)} className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted border border-border rounded-lg px-3 py-1.5 hover:text-foreground transition-colors"><Share2 size={12} />{t("manager.standard.actions.share")}</button><button onClick={() => downloadReportMetadata(report)} className="flex items-center gap-1.5 text-xs font-medium text-white bg-[#1565C0] rounded-lg px-3 py-1.5 hover:bg-[#1976D2] transition-colors"><Download size={12} />{t("manager.standard.actions.download")}</button></div></div>)}</div> : <EmptyState message={t("manager.standard.empty.reports")} />}
       </Card>
 
-      {preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onClick={() => setPreview(null)}><div className="w-full max-w-xl" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}><Card className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-[#1565C0]">{preview.tipo}</p><h3 className="text-lg font-semibold text-foreground mt-1">{preview.nome}</h3></div><button onClick={() => setPreview(null)} className="text-muted-foreground hover:text-foreground"><XCircle size={20} /></button></div><dl className="grid grid-cols-2 gap-4 mt-6 text-xs"><div><dt className="text-muted-foreground">{t("manager.standard.reports.generatedAt")}</dt><dd className="font-medium text-foreground mt-1">{formatDateTime(preview.gerado_em, locale)}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.format")}</dt><dd className="font-medium text-foreground mt-1">{preview.formato}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.size")}</dt><dd className="font-medium text-foreground mt-1">{formatBytes(preview.tamanho_bytes, locale)}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.path")}</dt><dd className="font-medium text-foreground mt-1 break-all">{text(preview.caminho_arquivo)}</dd></div></dl><div className="flex justify-end gap-2 mt-6"><button onClick={() => setPreview(null)} className="text-xs font-medium px-4 py-2 rounded-lg border border-border">{t("manager.standard.actions.close")}</button><button onClick={() => downloadReportMetadata(preview)} className="text-xs font-medium px-4 py-2 rounded-lg bg-[#1565C0] text-white">{t("manager.standard.actions.download")}</button></div></Card></div></div>}
+      {preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onClick={() => setPreview(null)}><div className="w-full max-w-xl" onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}><Card className="p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase tracking-widest text-[#1565C0]">{preview.tipo}</p><h3 className="text-lg font-semibold text-foreground mt-1">{preview.nome}</h3></div><button onClick={() => setPreview(null)} className="text-muted-foreground hover:text-foreground"><XCircle size={20} /></button></div><dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 text-xs"><div><dt className="text-muted-foreground">{t("manager.standard.reports.generatedAt")}</dt><dd className="font-medium text-foreground mt-1">{formatDateTime(preview.gerado_em, locale)}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.format")}</dt><dd className="font-medium text-foreground mt-1">{preview.formato}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.size")}</dt><dd className="font-medium text-foreground mt-1">{formatBytes(preview.tamanho_bytes, locale)}</dd></div><div><dt className="text-muted-foreground">{t("manager.standard.reports.path")}</dt><dd className="font-medium text-foreground mt-1 break-all">{text(preview.caminho_arquivo)}</dd></div></dl><div className="flex flex-col-reverse gap-2 mt-6 sm:flex-row sm:justify-end"><button onClick={() => setPreview(null)} className="text-xs font-medium px-4 py-2 rounded-lg border border-border">{t("manager.standard.actions.close")}</button><button onClick={() => downloadReportMetadata(preview)} className="text-xs font-medium px-4 py-2 rounded-lg bg-[#1565C0] text-white">{t("manager.standard.actions.download")}</button></div></Card></div></div>}
     </div>
   );
 }
@@ -1148,8 +1150,8 @@ function RegistrationCenter({ onSaved }: { onSaved: () => void }) {
     }
   };
 
-  if (loading) return <div className="p-8"><LoadingState message={t("manager.common.loading")} /></div>;
-  if (error || !catalogs) return <div className="p-8"><ErrorState message={error ?? t("manager.common.error")} retryLabel={t("manager.common.retry")} onRetry={reload} /></div>;
+  if (loading) return <div className="p-4 sm:p-6 lg:p-8"><LoadingState message={t("manager.common.loading")} /></div>;
+  if (error || !catalogs) return <div className="p-4 sm:p-6 lg:p-8"><ErrorState message={error ?? t("manager.common.error")} retryLabel={t("manager.common.retry")} onRetry={reload} /></div>;
 
   const ubsUnits = catalogs.units.filter((unit) => {
     const kind = String(unit.tipo_estabelecimento ?? "").toUpperCase();
@@ -1166,7 +1168,7 @@ function RegistrationCenter({ onSaved }: { onSaved: () => void }) {
   const submitLabel = submitting ? t("manager.registration.saving") : t("manager.registration.save");
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <PageHeader
         breadcrumb={t("manager.standard.pages.registrations.breadcrumb")}
         title={t("manager.registration.demo.pageTitle")}
@@ -1184,7 +1186,7 @@ function RegistrationCenter({ onSaved }: { onSaved: () => void }) {
       </div>
 
       <Card className="p-2 mb-5">
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2">
           {tabs.map(([id, label]) => (
             <button
               type="button"
@@ -1359,6 +1361,7 @@ export function ManagerHomePage() {
   const [activePage, setActivePage] = useState<Page>("inicio");
   const [search, setSearch] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const dashboard = useApiData<ManagerDashboardData>("/api/manager/dashboard");
 
@@ -1391,6 +1394,7 @@ export function ManagerHomePage() {
     comunicacoes: { title: t("manager.standard.pages.communications.title"), subtitle: t("manager.standard.pages.communications.subtitle") },
     cadastros: { title: t("manager.standard.pages.registrations.title"), subtitle: t("manager.standard.pages.registrations.subtitle") },
   };
+  useAccessiblePage(pageMeta[activePage].title, pageMeta[activePage].subtitle);
 
   if (dashboard.loading && !dashboard.data) return <LoadingState message={t("manager.common.loading")} />;
   if (dashboard.error || !dashboard.data) return <ErrorState message={dashboard.error ?? t("manager.common.error")} retryLabel={t("manager.common.retry")} onRetry={dashboard.reload} />;
@@ -1400,24 +1404,25 @@ export function ManagerHomePage() {
   const initials = managerName.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "GM";
 
   return (
-    <div className="flex h-screen w-full overflow-hidden" style={{ fontFamily: "Inter, DM Sans, sans-serif", background: "#F8F9FA" }}>
-      <aside className="flex w-56 shrink-0 flex-col h-full bg-white border-r border-slate-200">
+    <div className="flex h-[100dvh] w-full overflow-hidden" style={{ fontFamily: "Inter, DM Sans, sans-serif", background: "#F8F9FA" }}>
+      {mobileNavOpen && <button type="button" aria-label="Fechar menu" className="fixed inset-0 z-40 bg-slate-950/35 lg:hidden" onClick={() => setMobileNavOpen(false)} />}
+      <aside id="manager-sidebar" aria-label={t("shell.accessibility.mainNavigation")} className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-white border-r border-slate-200 shadow-xl transition-transform lg:static lg:z-auto lg:w-56 lg:translate-x-0 lg:shadow-none ${mobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-5 pt-6 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-2.5"><div className="w-8 h-8 rounded-lg bg-[#1565C0] flex items-center justify-center shrink-0"><Activity size={15} className="text-white" /></div><div><p className="text-slate-900 text-xs font-semibold leading-tight">{t("manager.standard.brand")}</p><p className="text-slate-400 text-[10px] leading-tight">{t("manager.standard.brandFull")}</p></div></div>
         </div>
 
-        <div className="px-4 py-3"><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><Search size={12} className="text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} type="text" placeholder={t("manager.standard.search")} className="w-full bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none" /></div></div>
+        <div className="px-4 py-3"><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><Search size={12} className="text-slate-400" /><input aria-label={t("manager.standard.search")} value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder={t("manager.standard.search")} className="w-full bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none" /></div></div>
 
-        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+        <nav aria-label={t("shell.accessibility.mainNavigation")} className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           <p className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase px-2 py-2">{t("manager.standard.mainMenu")}</p>
           {filteredNavItems.map((item) => {
             const isActive = activePage === item.id;
-            return <button key={item.id} onClick={() => setActivePage(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm font-medium ${isActive ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}><item.icon size={16} className={isActive ? "text-blue-600" : "text-slate-400"} /><span className="leading-tight">{item.label}</span>{isActive && <ChevronRight size={14} className="ml-auto text-blue-400" />}</button>;
+            return <button key={item.id} aria-current={isActive ? "page" : undefined} onClick={() => { setActivePage(item.id); setMobileNavOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors text-sm font-medium ${isActive ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}><item.icon aria-hidden="true" size={16} className={isActive ? "text-blue-600" : "text-slate-400"} /><span className="leading-tight">{item.label}</span>{isActive && <ChevronRight size={14} className="ml-auto text-blue-400" />}</button>;
           })}
         </nav>
 
         <div className="px-3 pb-4 border-t border-slate-100 pt-3 space-y-0.5">
-          <button type="button" onClick={() => setSettingsOpen(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+          <button type="button" onClick={() => { setMobileNavOpen(false); setSettingsOpen(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">
             <Settings size={16} className="text-slate-400" /> {t("shell.navbar.settings")}
           </button>
           <button type="button" onClick={() => void signOut()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors">
@@ -1426,13 +1431,16 @@ export function ManagerHomePage() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0 relative">
-          <div>
-            <h1 className="text-base font-bold text-slate-900">{pageMeta[activePage].title}</h1>
-            <p className="text-xs text-slate-400 font-medium">{pageMeta[activePage].subtitle}</p>
+      <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="min-h-14 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 shrink-0 relative">
+          <div className="flex min-w-0 items-center gap-3">
+            <button type="button" onClick={() => setMobileNavOpen(true)} aria-controls="manager-sidebar" aria-expanded={mobileNavOpen} className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" aria-label="Abrir menu"><Menu size={18} /></button>
+            <div className="min-w-0">
+              <h1 className="truncate text-sm sm:text-base font-bold text-slate-900">{pageMeta[activePage].title}</h1>
+              <p className="hidden sm:block truncate text-xs text-slate-400 font-medium">{pageMeta[activePage].subtitle}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <LanguageToggle />
             <div className="relative">
               <button
@@ -1440,13 +1448,14 @@ export function ManagerHomePage() {
                 onClick={() => setProfileOpen((value) => !value)}
                 className="w-8 h-8 rounded-full bg-[#1565C0] flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
                 aria-expanded={profileOpen}
+                aria-label={t("shell.navbar.myProfile")}
               >
                 {initials}
               </button>
               {profileOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                  <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-border bg-white shadow-2xl">
+                  <div className="fixed left-4 right-4 top-16 z-50 overflow-hidden rounded-xl border border-border bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:w-80">
                     <div className="bg-gradient-to-br from-[#1565C0] to-[#0A4880] px-5 py-4 text-white">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/40 bg-white/15 text-sm font-bold">{initials}</div>
@@ -1454,7 +1463,7 @@ export function ManagerHomePage() {
                           <p className="truncate text-sm font-bold">{managerName}</p>
                           <p className="text-xs text-white/75">{t("manager.standard.executiveAccess")}</p>
                         </div>
-                        <button type="button" onClick={() => setProfileOpen(false)} className="ml-auto text-white/70 hover:text-white"><X size={15} /></button>
+                        <button type="button" onClick={() => setProfileOpen(false)} aria-label={t("shell.accessibility.close")} className="ml-auto text-white/70 hover:text-white"><X size={15} aria-hidden="true" /></button>
                       </div>
                     </div>
                     <div className="divide-y divide-border px-4 py-1">

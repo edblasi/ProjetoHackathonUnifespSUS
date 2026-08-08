@@ -39,6 +39,7 @@ import {
 import type { TranslationKey } from "../i18n/translations";
 import { patientSectionForAlert } from "../lib/alertRouting";
 import { useSeenAlerts } from "../hooks/useSeenAlerts";
+import { useAccessiblePage } from "../components/Accessibility";
 
 const USER_HOME_CARD_IDS = ["request", "timeline", "digitalId", "support"] as const;
 type UserHomeCardId = (typeof USER_HOME_CARD_IDS)[number];
@@ -83,7 +84,7 @@ function WelcomeSection({ nomeExibicao }: { nomeExibicao: string }) {
     <div className="flex items-end justify-between">
       <div>
         <p className="text-sm text-muted-foreground font-medium mb-1 capitalize">{dateStr}</p>
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
           {greeting}, <span className="text-primary">{firstName}</span>
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">{t("home.welcome.subtitle")}</p>
@@ -115,8 +116,8 @@ function PedidoStatusCard({ pedido, onOpenTimeline }: { pedido: PedidoAtual; onO
   return (
     <button type="button" onClick={onOpenTimeline} className="block w-full text-left rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/30">
       <Card className="hover:border-primary/30 hover:shadow-md transition-all">
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-4">
+      <div className="p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
@@ -128,12 +129,12 @@ function PedidoStatusCard({ pedido, onOpenTimeline }: { pedido: PedidoAtual; onO
           <StatusBadge label={t(statusKey(pedido.status_solicitacao))} color={statusColor(pedido.status_solicitacao)} />
         </div>
 
-        <div className="flex gap-6">
-          <div className="flex-shrink-0 flex flex-col items-center justify-center bg-secondary rounded-xl px-5 py-4 border border-blue-100">
+        <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+          <div className="flex-shrink-0 flex flex-col items-center justify-center bg-secondary rounded-xl px-4 py-4 border border-blue-100 sm:px-5">
             <OrteseIcon />
           </div>
 
-          <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-4 content-center">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 content-center">
             {details.map(({ label, value }) => (
               <div key={label}>
                 <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
@@ -342,7 +343,7 @@ function DigitalIDCard({ device, nomeExibicao, iniciais, onViewHistory }: { devi
               {copied ? t("home.id.copied") : device.numero_serie}
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 text-[10px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 text-[10px]">
             <div><p className="font-bold uppercase tracking-wider text-slate-400">{t("home.deviceCard.model")}</p><p className="mt-0.5 font-semibold text-slate-700">{device.modelo_exato}</p></div>
             <div><p className="font-bold uppercase tracking-wider text-slate-400">{t("home.deviceCard.manufacturer")}</p><p className="mt-0.5 font-semibold text-slate-700">{device.fabricante}</p></div>
             <div><p className="font-bold uppercase tracking-wider text-slate-400">{t("home.deviceCard.uses")}</p><p className="mt-0.5 font-semibold text-slate-700">{device.numero_usos}</p></div>
@@ -458,6 +459,7 @@ export function UserHomePage() {
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportMode, setSupportMode] = useState<PatientSupportMode>("pain");
   const { t, locale } = useLang();
+  useAccessiblePage(t("shell.accessibility.patientPortal"), t("home.welcome.subtitle"));
   const navigate = useNavigate();
   const { visibleIds, toggle, reset, isVisible } = useDashboardCardPreferences<UserHomeCardId>(
     `umdr:patient:${user?.id ?? "anonymous"}:home-cards`,
@@ -537,11 +539,11 @@ export function UserHomePage() {
         onSignOut={handleSignOut}
       />
 
-      <main className="max-w-[1440px] mx-auto px-8 py-8">
+      <main id="main-content" tabIndex={-1} className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
         <section className="mb-5" aria-labelledby="welcome-heading">
           <WelcomeSection nomeExibicao={nomeExibicao || "—"} />
         </section>
-        <div className="mb-5 flex justify-end">
+        <div className="mb-5 flex justify-start sm:justify-end">
           <DashboardCustomizer options={cardOptions} visibleIds={visibleIds} onToggle={toggle} onReset={reset} />
         </div>
 

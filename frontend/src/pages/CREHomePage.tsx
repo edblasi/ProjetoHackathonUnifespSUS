@@ -15,6 +15,7 @@ import { crePageForAlert } from "../lib/alertRouting";
 import { patientFirstName } from "../lib/patientPrivacy";
 import { apiPatch, apiPost } from "../lib/api";
 import { useSeenAlerts } from "../hooks/useSeenAlerts";
+import { useAccessiblePage, useDialogAccessibility } from "../components/Accessibility";
 import {
   useKpiDashboard,
   useAlertasCriticos,
@@ -57,6 +58,7 @@ import {
   LogOut,
   Mail,
   MapPin,
+  Menu,
   MessageSquare,
   Package,
   PackageCheck,
@@ -196,9 +198,11 @@ interface SidebarProps {
   current: Page;
   onNavigate: (p: Page) => void;
   onOpenSettings: () => void;
+  open: boolean;
+  onClose: () => void;
 }
 
-function Sidebar({ current, onNavigate, onOpenSettings }: SidebarProps) 
+function Sidebar({ current, onNavigate, onOpenSettings, open, onClose }: SidebarProps) 
 {
   const { t, locale } = useLang();
   const { signOut } = useAuth();
@@ -225,7 +229,9 @@ function Sidebar({ current, onNavigate, onOpenSettings }: SidebarProps)
 
   return (
     <aside
-      className="w-56 shrink-0 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0"
+      id="cre-sidebar"
+      aria-label={t("shell.accessibility.mainNavigation")}
+      className={`fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white border-r border-slate-200 flex flex-col h-screen shadow-xl transition-transform lg:sticky lg:top-0 lg:z-auto lg:w-56 lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"}`}
       style={{ fontFamily: "Inter, sans-serif" }}
     >
       {/* logo */}
@@ -251,19 +257,21 @@ function Sidebar({ current, onNavigate, onOpenSettings }: SidebarProps)
             onChange={(event) => setSearch(event.target.value)}
             type="text"
             placeholder={t("nav.search")}
+            aria-label={t("nav.search")}
             className="w-full bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none"
           />
         </div>
       </div>
 
       {/* nav */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+      <nav aria-label={t("shell.accessibility.mainNavigation")} className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         {filteredNav.map(({ icon: Icon, label, page }) => {
           const active = page !== null && current === page;
           return (
             <button
               key={label}
-              onClick={() => page && onNavigate(page)}
+              aria-current={active ? "page" : undefined}
+              onClick={() => { if (page) { onNavigate(page); onClose(); } }}
               disabled={page === null}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
                 ${
@@ -289,7 +297,7 @@ function Sidebar({ current, onNavigate, onOpenSettings }: SidebarProps)
 
       {/* bottom */}
       <div className="px-3 pb-4 border-t border-slate-100 pt-3 space-y-0.5">
-        <button type="button" onClick={onOpenSettings} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+        <button type="button" onClick={() => { onClose(); onOpenSettings(); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">
           <Settings className="w-4 h-4 text-slate-400" /> {t("nav.settings")}
         </button>
         <button
@@ -311,6 +319,7 @@ function Sidebar({ current, onNavigate, onOpenSettings }: SidebarProps)
 
 function ProfilePopup({ onClose, onOpenSettings }: { onClose: () => void; onOpenSettings: () => void }) {
   const { t } = useLang();
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(true, onClose);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { data: usuario } = useUsuarioAtual();
@@ -332,7 +341,7 @@ function ProfilePopup({ onClose, onOpenSettings }: { onClose: () => void; onOpen
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-12 z-50 w-72 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t("shell.accessibility.profileMenu")} tabIndex={-1} className="fixed left-4 right-4 top-16 z-50 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-72" style={{ fontFamily: "Inter, sans-serif" }}>
         <div className="px-5 py-4 bg-gradient-to-br from-blue-700 to-blue-800 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white font-bold text-lg">{iniciais}</div>
@@ -346,8 +355,8 @@ function ProfilePopup({ onClose, onOpenSettings }: { onClose: () => void; onOpen
               )}
             </div>
           </div>
-          <button onClick={onClose} className="text-white/60 hover:text-white transition-colors mt-0.5">
-            <X className="w-4 h-4" />
+          <button type="button" onClick={onClose} aria-label={t("shell.accessibility.close")} className="text-white/60 hover:text-white transition-colors mt-0.5">
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
         <div className="px-5 py-4 space-y-3 border-b border-slate-100">
@@ -384,7 +393,7 @@ function ProfilePopup({ onClose, onOpenSettings }: { onClose: () => void; onOpen
   );
 }
 
-function Topbar({ page, onNavigate, onOpenSettings }: { page: Page; onNavigate: (page: Page) => void; onOpenSettings: () => void }) {
+function Topbar({ page, onNavigate, onOpenSettings, onOpenMenu }: { page: Page; onNavigate: (page: Page) => void; onOpenSettings: () => void; onOpenMenu: () => void }) {
   const { t, locale } = useLang();
   const [profileOpen, setProfileOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
@@ -430,28 +439,34 @@ function Topbar({ page, onNavigate, onOpenSettings }: { page: Page; onNavigate: 
     comunicacoes: { title: t("page.comunicacoes.title"), sub: t("page.comunicacoes.sub") },
   };
   const { title, sub } = pageTitleMap[page];
+  useAccessiblePage(title, sub);
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0 relative">
-      <div>
-        <h1 className="text-base font-bold text-slate-900">{title}</h1>
-        <p className="text-xs text-slate-400 font-medium">{sub}</p>
+    <header className="min-h-14 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 shrink-0 relative">
+      <div className="flex min-w-0 items-center gap-3">
+        <button type="button" onClick={onOpenMenu} aria-controls="cre-sidebar" className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" aria-label="Abrir menu"><Menu className="h-4 w-4" /></button>
+        <div className="min-w-0">
+          <h1 className="truncate text-sm sm:text-base font-bold text-slate-900">{title}</h1>
+          <p className="hidden sm:block truncate text-xs text-slate-400 font-medium">{sub}</p>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         <LanguageToggle />
         <div className="relative">
-          <button type="button" onClick={() => { setAlertsOpen((value) => !value); setProfileOpen(false); }} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors" aria-expanded={alertsOpen}>
-            <Bell className="w-4 h-4 text-slate-500" />
+          <button type="button" onClick={() => { setAlertsOpen((value) => !value); setProfileOpen(false); }} className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors" aria-expanded={alertsOpen} aria-controls="cre-alerts-panel" aria-label={t("shell.navbar.notifications")}>
+            <Bell aria-hidden="true" className="w-4 h-4 text-slate-500" />
             {hasUnreadAlerts && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />}
           </button>
-          {alertsOpen && <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><p className="text-sm font-bold text-slate-800">{t("shell.navbar.recentAlerts")}</p><p className="text-[11px] text-slate-400">{t("shell.navbar.recentAlertsHint")}</p></div><button type="button" onClick={() => setAlertsOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button></div>
+          {alertsOpen && <div id="cre-alerts-panel" role="region" aria-label={t("shell.accessibility.notificationsPanel")} className="fixed left-4 right-4 top-16 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:w-80">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><p className="text-sm font-bold text-slate-800">{t("shell.navbar.recentAlerts")}</p><p className="text-[11px] text-slate-400">{t("shell.navbar.recentAlertsHint")}</p></div><button type="button" onClick={() => setAlertsOpen(false)} aria-label={t("shell.accessibility.close")} className="text-slate-400 hover:text-slate-700"><X className="w-4 h-4" aria-hidden="true" /></button></div>
             {recentAlerts.length ? <div className="max-h-72 divide-y divide-slate-100 overflow-y-auto">{recentAlerts.map((alert) => <button key={alert.id} type="button" onClick={() => { markSeen(alert.id); if (alert.notificationId) void marcarComoLida(alert.notificationId); setAlertsOpen(false); onNavigate(alert.target); }} className={`flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${alert.unread ? "bg-white" : "bg-slate-50/70"}`}><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${alert.unread ? "bg-red-500" : "bg-slate-300"}`} /><span className="min-w-0"><span className={`block text-xs font-bold ${alert.unread ? "text-slate-800" : "text-slate-500"}`}>{alert.title}</span><span className={`mt-0.5 block text-[11px] line-clamp-2 ${alert.unread ? "text-slate-500" : "text-slate-400"}`}>{alert.description}</span><span className="mt-1 block text-[10px] text-slate-400">{alert.time}</span></span></button>)}</div> : <p className="px-4 py-6 text-center text-xs text-slate-400">{t("shell.navbar.noRecentAlerts")}</p>}
           </div>}
         </div>
         <div className="relative">
           <button
             onClick={() => setProfileOpen((o) => !o)}
+            aria-label={t("shell.navbar.myProfile")}
+            aria-expanded={profileOpen}
             className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
           >
             {iniciais}
@@ -478,7 +493,7 @@ function KpiCards({ onNavigate, visibleIds }: { onNavigate: (page: Page) => void
     { id: "matchings" as const, target: "matching" as const, label: t("kpi.matchings"), value: kpi?.matchings_mes, icon: Zap, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
   ].filter((card) => visibleIds.includes(card.id));
   return (
-    <div className="grid grid-cols-4 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
       {cards.map(({ label, value, icon: Icon, iconBg, iconColor, target }) => (
         <button
           type="button"
@@ -516,7 +531,7 @@ function FlowChart() {
   const data = formatted.slice(Math.max(0, formatted.length - slices[period]));
   return (
     <div className="bg-white rounded-xl border border-slate-200 flex flex-col overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
             <TrendingUp className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
@@ -744,7 +759,7 @@ function LotsTable() {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
             <ClipboardList
@@ -833,10 +848,10 @@ function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) {
   ];
 
   return (
-    <main className="flex-1 px-8 py-7 space-y-6 overflow-y-auto">
+    <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 overflow-y-auto">
       <div className="flex justify-end"><DashboardCustomizer options={options} visibleIds={visibleIds} onToggle={toggle} onReset={reset} /></div>
       <KpiCards onNavigate={onNavigate} visibleIds={visibleIds} />
-      <div className="grid grid-cols-[1fr_300px] gap-5 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-5 items-start">
         <FlowChart />
         <div className="flex flex-col gap-4">
           <AlertsCard onNavigate={onNavigate} />
@@ -854,15 +869,16 @@ function Dashboard({ onNavigate }: { onNavigate: (page: Page) => void }) {
 
 function PatientRecordsModal({ patients, onClose, onStartTriage }: { patients: PacienteAguardando[]; onClose: () => void; onStartTriage: (patientId: number) => void }) {
   const { t, locale } = useLang();
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(true, onClose);
   return (
-    <div className="fixed inset-0 z-[135] flex items-center justify-center bg-slate-950/45 p-5" onClick={onClose}>
-      <div className="max-h-[86vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-[135] flex items-center justify-center bg-slate-950/45 p-2 sm:p-5" onClick={onClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="patient-records-title" tabIndex={-1} className="max-h-[86vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
           <div>
-            <h2 className="text-base font-bold text-slate-900">{t("patients.records.title")}</h2>
+            <h2 id="patient-records-title" className="text-base font-bold text-slate-900">{t("patients.records.title")}</h2>
             <p className="mt-1 text-xs text-slate-500">{patients.length} {t("patients.records.count")}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} aria-label={t("shell.accessibility.close")} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-4 w-4" aria-hidden="true" /></button>
         </div>
         <div className="max-h-[68vh] overflow-auto">
           <table className="w-full text-sm">
@@ -923,12 +939,12 @@ function PatientsTable({ onStartTriage, refreshKey }: { onStartTriage: (patientI
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
       {/* header */}
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-bold text-slate-900">{t("patients.title")}</h2>
           <p className="text-xs text-slate-400 mt-0.5">{allPatients.length} {t("patients.sub")}</p>
         </div>
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg">
+        <div className="flex max-w-full items-center gap-1.5 overflow-x-auto bg-slate-100 p-1 rounded-lg">
           {tabs.map(({ key, label }) => (
             <button
               key={key}
@@ -1223,9 +1239,9 @@ function PacientesAguardados({ onStartTriage, refreshKey }: { onStartTriage: (pa
   const dispatchCount = (remessasReais ?? []).filter((r) => r.status === "AGUARDANDO_COLETA").length;
 
   return (
-    <main className="flex-1 px-8 py-7 overflow-y-auto">
+    <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 overflow-y-auto">
       {/* CRE kpis strip */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {[
           { icon: Users,        bg: "bg-blue-50",   color: "text-blue-600",   val: String(waitingCount),   label: t("cre.waiting")   },
           { icon: Activity,     bg: "bg-emerald-50",color: "text-emerald-600",val: String(attendingCount), label: t("cre.attending") },
@@ -1257,7 +1273,7 @@ function PacientesAguardados({ onStartTriage, refreshKey }: { onStartTriage: (pa
       </div>
 
       {/* two-column */}
-      <div className="grid grid-cols-[3fr_2fr] gap-5 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-5 items-start">
         <PatientsTable onStartTriage={onStartTriage} refreshKey={refreshKey} />
         <LogisticsPanel />
       </div>
@@ -1335,8 +1351,8 @@ function MatchingPage({ refreshKey, onChanged }: { refreshKey: number; onChanged
     }
   };
 
-  if (loading) return <main className="flex-1 p-8"><LoadingState message={t("matching.loading")} /></main>;
-  if (error || !data) return <main className="flex-1 p-8"><ErrorState message={error ?? t("matching.messages.genericError")} retryLabel={t("matching.retry")} onRetry={refetch} /></main>;
+  if (loading) return <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8"><LoadingState message={t("matching.loading")} /></main>;
+  if (error || !data) return <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8"><ErrorState message={error ?? t("matching.messages.genericError")} retryLabel={t("matching.retry")} onRetry={refetch} /></main>;
 
   const proposed = data.outgoing.filter((item) => item.status === "PROPOSTO");
   const accepted = data.outgoing.filter((item) => ["ACEITO", "EM_TRANSITO", "CONCLUIDO"].includes(item.status));
@@ -1347,14 +1363,14 @@ function MatchingPage({ refreshKey, onChanged }: { refreshKey: number; onChanged
   const statusClass = (status: string) => status === "PROPOSTO" ? "bg-amber-50 text-amber-700 border-amber-200" : status === "ACEITO" || status === "CONCLUIDO" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : status === "RECUSADO" || status === "CANCELADO" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200";
 
   return (
-    <main className="flex-1 p-8 overflow-auto">
+    <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-slate-900">{t("matching.title")}</h2>
         <p className="mt-1 text-sm text-slate-500">{t("matching.subtitle")}</p>
       </div>
       {message && <div className={`mb-5 rounded-xl border px-4 py-3 text-sm font-semibold ${message.ok ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"}`}>{message.text}</div>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { label: t("matching.kpi.available"), value: physicalStock, icon: Package, tone: "bg-blue-50 text-blue-700" },
           { label: t("matching.kpi.pending"), value: proposed.length, icon: Zap, tone: "bg-amber-50 text-amber-700" },
@@ -1441,9 +1457,9 @@ function LogisticaReversa({ onNewReturn, refreshKey }: { onNewReturn: () => void
   ];
 
   return (
-    <main className="flex-1 px-8 py-7 space-y-6 overflow-y-auto">
+    <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 overflow-y-auto">
       {/* kpis */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
         {kpis.map(({ icon: Icon, bg, color, val, label }) => (
           <div key={label} className="bg-white rounded-xl border border-slate-200 px-5 py-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
@@ -1459,7 +1475,7 @@ function LogisticaReversa({ onNewReturn, refreshKey }: { onNewReturn: () => void
 
       {/* table card */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
               <RefreshCw className="w-3.5 h-3.5 text-amber-600" strokeWidth={2.5} />
@@ -1653,9 +1669,9 @@ function Triagens({ onNewTriage, onEditTriage, refreshKey }: { onNewTriage: () =
   const avatarOf = (nome: string) => nome.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase();
 
   return (
-    <main className="flex-1 px-8 py-7 space-y-6 overflow-y-auto">
+    <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 overflow-y-auto">
       {/* kpis */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
         {kpis.map(({ icon: Icon, bg, color, val, label }) => (
           <div key={label} className="bg-white rounded-xl border border-slate-200 px-5 py-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
             <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
@@ -1669,10 +1685,10 @@ function Triagens({ onNewTriage, onEditTriage, refreshKey }: { onNewTriage: () =
         ))}
       </div>
 
-      <div className="grid grid-cols-[1fr_340px] gap-5 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5 items-start">
         {/* table */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
                 <ClipboardList className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
@@ -1682,7 +1698,7 @@ function Triagens({ onNewTriage, onEditTriage, refreshKey }: { onNewTriage: () =
                 <p className="text-xs text-slate-400">{t("triage.table.sub")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg">
+            <div className="flex max-w-full items-center gap-1.5 overflow-x-auto bg-slate-100 p-1 rounded-lg">
               {statusOpts.map(({ key, label }) => (
                 <button key={key} onClick={() => setFilterStatus(key)} className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap ${filterStatus === key ? "bg-blue-700 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{label}</button>
               ))}
@@ -1850,9 +1866,9 @@ function Relatorios({ onNavigate }: { onNavigate: (page: Page) => void }) {
   ];
 
   return (
-    <main className="flex-1 px-8 py-7 space-y-6 overflow-y-auto">
+    <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-6 overflow-y-auto">
       {/* kpis */}
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
         {kpis.map(({ target, icon: Icon, bg, color, val, label, sub }) => (
           <button type="button" onClick={() => onNavigate(target)} key={label} className="bg-white rounded-xl border border-slate-200 px-5 py-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all text-left focus:outline-none focus:ring-2 focus:ring-blue-200">
             <div className="flex items-start justify-between mb-4">
@@ -1868,10 +1884,10 @@ function Relatorios({ onNavigate }: { onNavigate: (page: Page) => void }) {
       </div>
 
       {/* charts row */}
-      <div className="grid grid-cols-[1fr_300px] gap-5 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-5 items-start">
         {/* bar chart */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
                 <BarChart2 className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
@@ -1960,7 +1976,7 @@ function Relatorios({ onNavigate }: { onNavigate: (page: Page) => void }) {
 
       {/* export section */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center">
             <FileText className="w-3.5 h-3.5 text-slate-500" strokeWidth={2.5} />
           </div>
@@ -1969,7 +1985,7 @@ function Relatorios({ onNavigate }: { onNavigate: (page: Page) => void }) {
             <p className="text-xs text-slate-400">{t("reports.export.sub")}</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 sm:p-5">
           {[
             { kind: "patients", icon: Users, title: t("reports.rep.patients"), sub: t("reports.rep.patientsSub"), color: "text-blue-600", bg: "bg-blue-50" },
             { kind: "triages", icon: Zap, title: t("reports.rep.matchings"), sub: t("reports.rep.matchingsSub"), color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -2013,23 +2029,25 @@ function AppInner() {
   const [triagePatientId, setTriagePatientId] = useState<number | null>(null);
   const [editingTriage, setEditingTriage] = useState<Triagem | null>(null);
   const [shipmentOpen, setShipmentOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const openNewTriage = (patientId: number | null = null) => { setEditingTriage(null); setTriagePatientId(patientId); setTriageOpen(true); };
   const openEditTriage = (triage: Triagem) => { setEditingTriage(triage); setTriagePatientId(triage.paciente_id); setTriageOpen(true); };
   const refreshData = () => setRefreshKey((value) => value + 1);
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]" style={{ fontFamily: "Inter, sans-serif" }}>
-      <Sidebar current={page} onNavigate={setPage} onOpenSettings={() => setSettingsOpen(true)} />
+      {mobileNavOpen && <button type="button" aria-label="Fechar menu" className="fixed inset-0 z-40 bg-slate-950/35 lg:hidden" onClick={() => setMobileNavOpen(false)} />}
+      <Sidebar current={page} onNavigate={setPage} onOpenSettings={() => setSettingsOpen(true)} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Topbar page={page} onNavigate={setPage} onOpenSettings={() => setSettingsOpen(true)} />
+        <Topbar page={page} onNavigate={setPage} onOpenSettings={() => setSettingsOpen(true)} onOpenMenu={() => setMobileNavOpen(true)} />
         {page === "inicio"     && <Dashboard onNavigate={setPage} />}
         {page === "pacientes"  && <PacientesAguardados onStartTriage={(patientId) => openNewTriage(patientId)} refreshKey={refreshKey} />}
         {page === "logistica"  && <LogisticaReversa onNewReturn={() => setShipmentOpen(true)} refreshKey={refreshKey} />}
         {page === "matching"   && <MatchingPage refreshKey={refreshKey} onChanged={refreshData} />}
         {page === "triagens"   && <Triagens onNewTriage={() => openNewTriage()} onEditTriage={openEditTriage} refreshKey={refreshKey} />}
         {page === "relatorios" && <Relatorios onNavigate={setPage} />}
-        {page === "atendimentos" && <CreSupportInbox />}
-        {page === "comunicacoes" && <CommunicationsCenter role="FISCAL_CRE" />}
+        {page === "atendimentos" && <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto"><CreSupportInbox /></main>}
+        {page === "comunicacoes" && <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto"><CommunicationsCenter role="FISCAL_CRE" /></main>}
       </div>
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <TriageModal open={triageOpen} onClose={() => setTriageOpen(false)} onSaved={refreshData} initialPatientId={triagePatientId} triage={editingTriage} />

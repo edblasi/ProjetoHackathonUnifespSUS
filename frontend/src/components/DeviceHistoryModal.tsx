@@ -2,6 +2,7 @@ import { Clock3, History, X } from "lucide-react";
 import { useLang } from "../i18n/LanguageContext";
 import { useDeviceHistory, type PatientDevice } from "../hooks/FetchData";
 import { DeviceIdentityCard, exportDeviceCardPdf } from "./DeviceIdentityCard";
+import { useDialogAccessibility } from "./Accessibility";
 
 export function formatUsageDuration(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
@@ -13,11 +14,12 @@ export function formatUsageDuration(totalMinutes: number): string {
 export function DeviceHistoryModal({ open, onClose, device, patientName }: { open: boolean; onClose: () => void; device: PatientDevice | null; patientName: string }) {
   const { t, locale } = useLang();
   const { data, loading, error } = useDeviceHistory(open ? device?.id ?? null : null);
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(open && Boolean(device), onClose);
   if (!open || !device) return null;
   const summary = data?.summary;
   return <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-slate-50 shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4"><div><h2 className="text-lg font-bold text-slate-900">{t("home.historyModal.title")}</h2><p className="text-xs text-slate-500">{t("home.historyModal.subtitle")}</p></div><button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="device-history-title" tabIndex={-1} className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-slate-50 shadow-2xl">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4"><div><h2 id="device-history-title" className="text-lg font-bold text-slate-900">{t("home.historyModal.title")}</h2><p className="text-xs text-slate-500">{t("home.historyModal.subtitle")}</p></div><button type="button" onClick={onClose} aria-label={t("shell.accessibility.close")} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" aria-hidden="true" /></button></div>
       <div className="space-y-5 p-6">
         <DeviceIdentityCard device={device} patientName={patientName} />
         <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("home.historyModal.useCount")}</p><p className="mt-1 text-2xl font-bold text-slate-900">{summary?.numero_usos ?? device.numero_usos}</p></div><div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("home.historyModal.totalTime")}</p><p className="mt-1 text-2xl font-bold text-slate-900">{formatUsageDuration(summary?.tempo_total_uso_minutos ?? device.tempo_total_uso_minutos)}</p></div><div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t("home.historyModal.avgTime")}</p><p className="mt-1 text-2xl font-bold text-slate-900">{formatUsageDuration(summary?.tempo_medio_uso_minutos ?? 0)}</p></div></div>

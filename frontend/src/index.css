@@ -62,3 +62,18 @@ select option { background-color: white; }
 .focus\:ring-primary\/30:focus { --tw-ring-color: rgba(0, 86, 172, 0.30); }
 .focus\:ring-primary\/25:focus { --tw-ring-color: rgba(0, 86, 172, 0.25); }
 .focus\:ring-destructive\/30:focus { --tw-ring-color: rgba(198, 40, 40, 0.30); }
+
+/* Acessibilidade: foco visível, leitores de tela e redução de movimento. */
+:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

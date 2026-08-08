@@ -56,7 +56,7 @@ export function Navbar({
 
   return (
     <header className="bg-white border-b border-border sticky top-0 z-50" style={{ boxShadow: "0 1px 8px rgba(0,86,172,0.07)" }}>
-      <div className="max-w-[1440px] mx-auto px-8 h-16 flex items-center justify-between gap-6">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4 lg:gap-6">
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
             <svg viewBox="0 0 24 24" className="w-5 h-5 text-white fill-white" aria-hidden="true">
@@ -70,35 +70,35 @@ export function Navbar({
           </div>
         </div>
 
-        <div className="flex-1 max-w-sm">
+        <div className="hidden md:block flex-1 max-w-sm">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <input type="search" placeholder={t("shell.navbar.searchPlaceholder")} className="w-full h-9 pl-9 pr-4 text-sm rounded-lg bg-input-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all" aria-label={t("shell.navbar.searchPlaceholder")} />
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <LanguageToggle />
 
           <div className="relative">
-            <button onClick={() => { setShowNotif(!showNotif); setShowDropdown(false); }} className="relative w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.notifications")} aria-expanded={showNotif}>
+            <button onClick={() => { setShowNotif(!showNotif); setShowDropdown(false); }} className="relative w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.notifications")} aria-expanded={showNotif} aria-controls="patient-notifications-panel">
               <Bell className="w-4.5 h-4.5" />
               {hasUnread && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" aria-hidden="true" />}
             </button>
             {showNotif && (
-              <div className="absolute right-0 top-11 w-80 bg-white rounded-xl border border-border shadow-lg z-50 overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(0,86,172,0.12)" }}>
+              <div id="patient-notifications-panel" role="region" aria-label={t("shell.accessibility.notificationsPanel")} className="fixed left-4 right-4 top-[4.5rem] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80 bg-white rounded-xl border border-border shadow-lg z-50 overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(0,86,172,0.12)" }}>
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                   <div>
                     <span className="text-sm font-semibold text-foreground">{t("shell.navbar.recentAlerts")}</span>
                     <p className="text-[11px] text-muted-foreground mt-0.5">{t("shell.navbar.recentAlertsHint")}</p>
                   </div>
-                  <button onClick={() => setShowNotif(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setShowNotif(false)} aria-label={t("shell.accessibility.close")} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" aria-hidden="true" /></button>
                 </div>
                 {alertItems.length ? (
                   <div className="max-h-80 divide-y divide-border overflow-y-auto">
                     {alertItems.map((item, index) => (
                       <button key={item.id ?? index} type="button" onClick={() => { item.onClick?.(); setShowNotif(false); }} className="flex w-full gap-3 px-4 py-3 text-left hover:bg-muted/50">
-                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${item.unread === false ? "bg-slate-300" : "bg-amber-500"}`} />
+                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${item.unread === false ? "bg-slate-300" : "bg-amber-500"}`} /><span className="sr-only">{t(item.unread === false ? "shell.accessibility.read" : "shell.accessibility.unread")}</span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm text-foreground font-medium">{item.title}</p>
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
@@ -113,13 +113,13 @@ export function Navbar({
           </div>
 
           {onOpenSettings && (
-            <button type="button" onClick={() => { setShowNotif(false); setShowDropdown(false); onOpenSettings(); }} className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.settings")} title={t("shell.navbar.settings")}>
+            <button type="button" onClick={() => { setShowNotif(false); setShowDropdown(false); onOpenSettings(); }} className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.settings")} title={t("shell.navbar.settings")}>
               <Settings className="w-4 h-4" />
             </button>
           )}
 
           <div className="relative">
-            <button onClick={() => { setShowDropdown(!showDropdown); setShowNotif(false); }} className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-lg hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.myProfile")} aria-expanded={showDropdown}>
+            <button onClick={() => { setShowDropdown(!showDropdown); setShowNotif(false); }} className="flex items-center gap-1.5 sm:gap-2.5 pl-1 pr-1 sm:pr-3 py-1 rounded-lg hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.myProfile")} aria-expanded={showDropdown} aria-controls="patient-profile-menu">
               <Avatar initials={userInitials} size="sm" />
               <div className="text-left hidden sm:block">
                 <div className="text-sm font-medium text-foreground leading-none">{shortName}</div>
@@ -128,7 +128,7 @@ export function Navbar({
               <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${showDropdown ? "rotate-180" : ""}`} />
             </button>
             {showDropdown && (
-              <div className="absolute right-0 top-11 w-80 bg-white rounded-xl border border-border shadow-lg z-50 overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(0,86,172,0.12)" }}>
+              <div id="patient-profile-menu" role="region" aria-label={t("shell.accessibility.profileMenu")} className="fixed left-4 right-4 top-[4.5rem] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80 bg-white rounded-xl border border-border shadow-lg z-50 overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(0,86,172,0.12)" }}>
                 <div className="bg-gradient-to-br from-primary to-[#0A4880] px-5 py-4 text-white">
                   <div className="flex items-center gap-3">
                     <Avatar initials={userInitials} size="md" />

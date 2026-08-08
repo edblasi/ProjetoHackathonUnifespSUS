@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import asyncio
 from datetime import date, datetime
 from decimal import Decimal
 import os
@@ -112,8 +113,6 @@ FIELD_LABELS = {
     "cre_destino_cnes": "CRE de destino",
     "numero_autorizacao": "Número de autorização SISREG",
     "produto_id": "Produto OPM",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
     "oficina_id": "CRE parceiro",
     "nome_ong": "Nome da ONG",
     "tipo_parceria": "Tipo de parceria",
@@ -1277,14 +1276,95 @@ async def cre_kpis(identity: Identity = Depends(current_identity)) -> dict[str, 
 @app.get("/api/cre/alerts")
 async def cre_alerts(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    rows = await db_select("fila", "vw_alertas_criticos", order="gerado_em.desc")
-    return [{**row, "target": "cre_logistics"} for row in rows]
+    cnes = str(identity.cnes_vinculo or "").strip()
+    if not cnes:
+        return []
+
+    workshops = await db_select(
+        "producao", "oficina_ortopedica",
+        select="id,nome,cnes", filters={"cnes": f"eq.{cnes}", "ativo": "eq.true"}, limit=20,
+    )
+    workshop_ids = [int(row["id"]) for row in workshops if row.get("id") is not None]
+    local_stock: list[dict[str, Any]] = []
+    if workshop_ids:
+        local_stock = await db_select(
+            "producao", "material_estoque",
+            select="id,oficina_id,codigo_catmat,quantidade_atual,quantidade_minima,unidade_medida",
+            filters={"oficina_id": f"in.({','.join(map(str, workshop_ids))})"}, limit=5000,
+        )
+    low_stock = [
+        row for row in local_stock
+        if float(row.get("quantidade_atual") or 0) <= float(row.get("quantidade_minima") or 0)
+    ]
+    catmat_codes = sorted({str(row.get("codigo_catmat") or "").strip() for row in low_stock if row.get("codigo_catmat")})
+    catmat_rows = await db_select(
+        "dominio", "catmat_item", select="codigo_catmat,descricao",
+        filters={"codigo_catmat": f"in.({','.join(catmat_codes)})"}, limit=5000,
+    ) if catmat_codes else []
+    catmat_name = {str(row.get("codigo_catmat") or "").strip(): row.get("descricao") for row in catmat_rows}
+    workshop_name = {int(row["id"]): row.get("nome") for row in workshops if row.get("id") is not None}
+
+    local_patients = await db_select(
+        "fila", "vw_pacientes_cre",
+        select="solicitacao_id,dias_espera_efetivos",
+        filters={"cre_destino_cnes": f"eq.{cnes}"}, limit=5000,
+    )
+    long_wait = sum(1 for row in local_patients if float(row.get("dias_espera_efetivos") or 0) > 30)
+
+    generated = datetime.now().isoformat()
+    result: list[dict[str, Any]] = [
+        {
+            "tipo": "ESTOQUE",
+            "mensagem": (
+                f"Estoque crítico: {catmat_name.get(str(row.get('codigo_catmat') or '').strip()) or row.get('codigo_catmat')} "
+                f"({row.get('quantidade_atual')} / mínimo {row.get('quantidade_minima')} {row.get('unidade_medida') or ''}) "
+                f"em {workshop_name.get(int(row.get('oficina_id') or 0), 'seu CRE')}"
+            ),
+            "gerado_em": generated,
+            "target": "cre_logistics",
+        }
+        for row in low_stock
+    ]
+    if long_wait:
+        result.append({
+            "tipo": "FILA_LONGA",
+            "mensagem": f"{long_wait} pacientes deste CRE aguardam há mais de 30 dias.",
+            "gerado_em": generated,
+            "target": "cre_patients",
+        })
+    return result
 
 
 @app.get("/api/cre/recalls")
 async def cre_recalls(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    return await db_select("app", "recall", order="data_abertura.desc", limit=100)
+    cnes = str(identity.cnes_vinculo or "").strip()
+    if not cnes:
+        return []
+
+    workshops = await db_select(
+        "producao", "oficina_ortopedica",
+        select="id", filters={"cnes": f"eq.{cnes}", "ativo": "eq.true"}, limit=20,
+    )
+    workshop_ids = [int(row["id"]) for row in workshops if row.get("id") is not None]
+    if not workshop_ids:
+        return []
+    stock = await db_select(
+        "producao", "material_estoque", select="id",
+        filters={"oficina_id": f"in.({','.join(map(str, workshop_ids))})"}, limit=5000,
+    )
+    material_ids = [int(row["id"]) for row in stock if row.get("id") is not None]
+    if not material_ids:
+        return []
+    movements = await db_select(
+        "producao", "movimentacao_estoque", select="lote_fabricante",
+        filters={"material_estoque_id": f"in.({','.join(map(str, material_ids))})"}, limit=5000,
+    )
+    local_lots = {str(row.get("lote_fabricante") or "").strip() for row in movements if row.get("lote_fabricante")}
+    if not local_lots:
+        return []
+    recalls = await db_select("app", "recall", order="data_abertura.desc", limit=100)
+    return [row for row in recalls if str(row.get("codigo_lote") or "").strip() in local_lots]
 
 
 @app.get("/api/cre/flow")
@@ -1381,21 +1461,12 @@ async def _notify_new_matching(match: dict[str, Any]) -> None:
         "app", "usuario_sistema", select="auth_user_id",
         filters={"papel": "eq.FISCAL_CRE", "cnes_vinculo": f"eq.{source_cnes}", "ativo": "eq.true"}, limit=50,
     )
-    managers = await db_select(
-        "app", "usuario_sistema", select="auth_user_id",
-        filters={"papel": "eq.GESTOR", "ativo": "eq.true"}, limit=100,
-    )
     product = match.get("nome_produto") or f"Produto #{match.get('produto_id')}"
     destination = match.get("cre_destino_nome") or destination_cnes
     await _notify_auth_users(
         source_users, tipo="ALERTA", titulo="Novo matching de reaproveitamento",
         mensagem=f"Uma unidade de {product} do seu estoque deu match com um paciente de {destination} ({distance_text}). Aceitar envio?",
         referencia_id=int(match["matching_id"]), destino_ui="cre_matching",
-    )
-    await _notify_auth_users(
-        managers, tipo="INFO", titulo="Matching nacional identificado",
-        mensagem=f"{product}: {source_cnes} → {destination} ({distance_text}). Aguardando decisão do CRE de origem.",
-        referencia_id=int(match["matching_id"]), destino_ui="manager_lifecycle",
     )
 
 
@@ -1422,6 +1493,7 @@ class CreInventoryDeviceCreate(BaseModel):
     data_fabricacao: date | None = None
     data_validade: date | None = None
     condicao: Literal["NOVO", "OCIOSO", "RECONDICIONADO", "DANIFICADO", "VENCIDO"] = "OCIOSO"
+    destino_reaproveitamento: Literal["CLINICO", "FUNDICAO", "PECAS_COMPONENTES", "DESCARTE"] = "CLINICO"
     apto_reuso: bool = True
     observacao: str | None = None
 
@@ -1458,35 +1530,7 @@ async def cre_matching(identity: Identity = Depends(current_identity)) -> dict[s
     destination_matches = await db_select("producao", "vw_matchings_cre", filters={"cre_destino_cnes": f"eq.{cnes}"}, order="criado_em.desc", limit=500)
     products = await db_select("producao", "produto_ortese", select="id,procedimento_sigtap,nome_produto,especificacao_tecnica,ativo", filters={"ativo": "eq.true"}, order="nome_produto.asc", limit=1000)
     procedures = await db_select("dominio", "sigtap_procedimento", select="codigo,nome_procedimento", filters={"ativo": "eq.true"}, order="nome_procedimento.asc", limit=1000)
-    unit = await db_select("dominio", "estabelecimento_cnes", select="codigo_cnes,nome_fantasia,latitude,longitude", filters={"codigo_cnes": f"eq.{cnes}"}, limit=1)
-    return {"inventory": inventory, "outgoing": source_matches, "incoming": destination_matches, "products": products, "procedures": procedures, "unit": unit[0] if unit else None, "priority_rules": list(MATCHING_PRIORITY_RULES)}
-
-
-class MatchingLocationPatch(BaseModel):
-    latitude: float = Field(ge=-90, le=90)
-    longitude: float = Field(ge=-180, le=180)
-
-
-@app.patch("/api/cre/matching/location")
-async def update_matching_location(payload: MatchingLocationPatch, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
-    require_roles(identity, "FISCAL_CRE")
-    cnes = str(identity.cnes_vinculo or "").strip()
-    if not cnes:
-        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
-    rows = await db_update("dominio", "estabelecimento_cnes", {"codigo_cnes": f"eq.{cnes}"}, {
-        "latitude": payload.latitude, "longitude": payload.longitude,
-    })
-    if not rows:
-        raise HTTPException(status_code=404, detail="CRE não encontrado no cadastro CNES.")
-    created = await _run_matching_and_notify()
-    return {"unit": rows[0], "new_matches": created}
-
-
-@app.post("/api/cre/matching/recalculate")
-async def recalculate_matching(identity: Identity = Depends(current_identity)) -> dict[str, Any]:
-    await cre_identity(identity)
-    created = await _run_matching_and_notify()
-    return {"created": len(created), "matches": created}
+    return {"inventory": inventory, "outgoing": source_matches, "incoming": destination_matches, "products": products, "procedures": procedures}
 
 
 @app.post("/api/cre/inventory/devices", status_code=201)
@@ -1519,8 +1563,20 @@ async def create_cre_inventory_device(payload: CreInventoryDeviceCreate, identit
     if not product:
         raise HTTPException(status_code=422, detail="Produto OPM não encontrado.")
     expired = payload.data_validade is not None and payload.data_validade < date.today()
-    unsafe = payload.condicao in {"DANIFICADO", "VENCIDO"} or expired
     condition = "VENCIDO" if expired else payload.condicao
+    clinically_unsafe = condition in {"DANIFICADO", "VENCIDO"}
+    reuse_route = payload.destino_reaproveitamento
+    if clinically_unsafe and reuse_route == "CLINICO":
+        raise HTTPException(status_code=422, detail="Dispositivos danificados ou vencidos não podem voltar ao uso clínico. Selecione fundição, aproveitamento de peças/componentes ou descarte.")
+    if reuse_route == "DESCARTE":
+        reusable = False
+        status_value = "BLOQUEADO"
+    elif reuse_route in {"FUNDICAO", "PECAS_COMPONENTES"}:
+        reusable = True
+        status_value = "DISPONIVEL"
+    else:
+        reusable = payload.apto_reuso
+        status_value = "DISPONIVEL" if reusable else "BLOQUEADO"
     device = (await db_insert("producao", "estoque_dispositivo", {
         "oficina_id": offices[0]["id"],
         "produto_id": product["id"],
@@ -1530,12 +1586,53 @@ async def create_cre_inventory_device(payload: CreInventoryDeviceCreate, identit
         "data_fabricacao": payload.data_fabricacao.isoformat() if payload.data_fabricacao else None,
         "data_validade": payload.data_validade.isoformat() if payload.data_validade else None,
         "condicao": condition,
-        "status": "BLOQUEADO" if unsafe else "DISPONIVEL",
-        "apto_reuso": False if unsafe else payload.apto_reuso,
+        "destino_reaproveitamento": reuse_route,
+        "status": status_value,
+        "apto_reuso": reusable,
         "observacao": payload.observacao,
     }))[0]
-    created_matches = await _run_matching_and_notify() if not unsafe and payload.apto_reuso else []
+    eligible_for_patient = reuse_route == "CLINICO" and not clinically_unsafe and reusable
+    created_matches = await _run_matching_and_notify() if eligible_for_patient else []
     return {"device": device, "product": product, "new_matches": created_matches}
+
+
+class InventoryReuseRoutePatch(BaseModel):
+    destino_reaproveitamento: Literal["CLINICO", "FUNDICAO", "PECAS_COMPONENTES", "DESCARTE"]
+
+
+@app.patch("/api/cre/inventory/devices/{device_id}/reuse-route")
+async def update_inventory_reuse_route(device_id: int, payload: InventoryReuseRoutePatch, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
+    require_roles(identity, "FISCAL_CRE")
+    cnes = str(identity.cnes_vinculo or "").strip()
+    offices = await db_select("producao", "oficina_ortopedica", select="id", filters={"cnes": f"eq.{cnes}", "ativo": "eq.true"}, limit=1)
+    if not offices:
+        raise HTTPException(status_code=422, detail="Este CRE não possui oficina ortopédica ativa.")
+    rows = await db_select(
+        "producao", "estoque_dispositivo",
+        select="id,oficina_id,condicao,data_validade,status",
+        filters={"id": f"eq.{device_id}", "oficina_id": f"eq.{offices[0]['id']}"}, limit=1,
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado no estoque deste CRE.")
+    device = rows[0]
+    if device.get("status") in {"RESERVADO", "EM_TRANSFERENCIA", "UTILIZADO"}:
+        raise HTTPException(status_code=409, detail="O destino de reaproveitamento não pode ser alterado enquanto o dispositivo está reservado, em transferência ou já utilizado.")
+    expired = bool(device.get("data_validade") and str(device.get("data_validade"))[:10] < date.today().isoformat())
+    unsafe = device.get("condicao") in {"DANIFICADO", "VENCIDO"} or expired
+    if unsafe and payload.destino_reaproveitamento == "CLINICO":
+        raise HTTPException(status_code=422, detail="Dispositivos danificados ou vencidos só podem seguir para fundição, peças/componentes ou descarte.")
+    reusable = payload.destino_reaproveitamento != "DESCARTE"
+    updated = await db_update(
+        "producao", "estoque_dispositivo", {"id": f"eq.{device_id}"},
+        {
+            "destino_reaproveitamento": payload.destino_reaproveitamento,
+            "apto_reuso": reusable,
+            "status": "DISPONIVEL" if reusable else "BLOQUEADO",
+            "atualizado_em": datetime.now().isoformat(),
+        },
+    )
+    created = await _run_matching_and_notify() if payload.destino_reaproveitamento == "CLINICO" and not unsafe else []
+    return {"device": updated[0] if updated else device, "new_matches": created}
 
 
 class MatchingDecision(BaseModel):
@@ -1573,10 +1670,8 @@ async def decide_matching(matching_id: int, payload: MatchingDecision, identity:
     if not changed:
         raise HTTPException(status_code=409, detail="Este matching acabou de ser respondido em outra sessão.")
     destination_users = await db_select("app", "usuario_sistema", select="auth_user_id", filters={"papel": "eq.FISCAL_CRE", "cnes_vinculo": f"eq.{str(match.get('cre_destino_cnes') or '').strip()}", "ativo": "eq.true"}, limit=50)
-    managers = await db_select("app", "usuario_sistema", select="auth_user_id", filters={"papel": "eq.GESTOR", "ativo": "eq.true"}, limit=100)
     message = f"O CRE {match.get('cre_origem_nome') or match.get('cre_origem_cnes')} aceitou enviar {match.get('nome_produto')} para {match.get('cre_destino_nome') or match.get('cre_destino_cnes')}."
     await _notify_auth_users(destination_users, tipo="INFO", titulo="Matching aceito pelo CRE de origem", mensagem=message, referencia_id=matching_id, destino_ui="cre_matching")
-    await _notify_auth_users(managers, tipo="INFO", titulo="Reaproveitamento confirmado", mensagem=message, referencia_id=matching_id, destino_ui="manager_lifecycle")
     return {"matching_id": matching_id, "status": "ACEITO"}
 
 
@@ -2032,10 +2127,8 @@ class CreCreate(BaseModel):
     nome_fantasia: str
     tipo_estabelecimento: str = "CENTRO ESPECIALIZADO EM REABILITACAO"
     municipio_ibge6: str
-    logradouro: str | None = None
+    logradouro: str
     telefone: str | None = None
-    latitude: float | None = Field(default=None, ge=-90, le=90)
-    longitude: float | None = Field(default=None, ge=-180, le=180)
     capacidade_producao_mensal: int | None = Field(default=None, ge=0)
     nome_responsavel: str
     email_responsavel: EmailStr
@@ -2097,8 +2190,10 @@ class CreCreate(BaseModel):
 
     @field_validator("logradouro", mode="before")
     @classmethod
-    def validate_address(cls, value: Any) -> str | None:
-        return clean_text(value, field="Endereço", max_length=255)
+    def validate_address(cls, value: Any) -> str:
+        result = clean_text(value, field="Endereço", required=True, max_length=255)
+        assert result is not None
+        return result
 
 
 @app.post("/api/admin/cres", status_code=201)
@@ -2107,7 +2202,12 @@ async def create_cre(payload: CreCreate, identity: Identity = Depends(current_id
     await ensure_unique("dominio", "estabelecimento_cnes", "codigo_cnes", payload.codigo_cnes, "Já existe uma unidade com este CNES.")
     await ensure_unique("fila", "profissional_saude", "cns", payload.cns_responsavel, "Já existe um profissional com este CNS.")
     await ensure_unique("fila", "profissional_saude", "cpf", payload.cpf_responsavel, "Já existe um profissional com este CPF.")
-    await ensure_record_exists("dominio", "municipio_ibge", "codigo_ibge6", payload.municipio_ibge6, "O município informado não existe no catálogo IBGE.")
+    municipality_rows = await db_select(
+        "dominio", "municipio_ibge", select="codigo_ibge6,nome_municipio,uf_sigla",
+        filters={"codigo_ibge6": f"eq.{payload.municipio_ibge6}"}, limit=1,
+    )
+    if not municipality_rows:
+        raise HTTPException(status_code=422, detail="O município informado não existe no catálogo IBGE.")
     await ensure_record_exists("dominio", "cbo", "codigo", payload.cbo_responsavel, "O CBO do responsável não existe no catálogo carregado.")
 
     unit: dict[str, Any] | None = None
@@ -2122,10 +2222,8 @@ async def create_cre(payload: CreCreate, identity: Identity = Depends(current_id
             "nome_fantasia": payload.nome_fantasia,
             "tipo_estabelecimento": payload.tipo_estabelecimento,
             "municipio_ibge6": payload.municipio_ibge6,
-            "logradouro": payload.logradouro or None,
+            "logradouro": payload.logradouro,
             "telefone": payload.telefone or None,
-            "latitude": payload.latitude,
-            "longitude": payload.longitude,
             "habilitado_opm": True,
             "ativo": True,
         }))[0]
@@ -2154,7 +2252,9 @@ async def create_cre(payload: CreCreate, identity: Identity = Depends(current_id
             "nome_exibicao": payload.nome_responsavel,
             "idioma_preferido": payload.idioma_preferido,
         }))[0]
-        return {"unit": unit, "workshop": workshop, "professional": professional, "profile": profile}
+        return {
+            "unit": unit, "workshop": workshop, "professional": professional, "profile": profile,
+        }
     except Exception:
         if auth_user:
             await delete_auth_user(auth_user["id"])
@@ -3107,7 +3207,6 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
     agrega os valores necessários para os gráficos e devolve JSON ao frontend.
     """
     require_roles(identity, "GESTOR")
-    import asyncio
 
     (
         units,
@@ -3243,8 +3342,7 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
     conformity_rate = round(100 * (len(requests) - len(cancelled_requests)) / len(requests), 1) if requests else 0
     efficiency_rate = round(100 * len(delivered_requests) / len(requests), 1) if requests else 0
     damaged_expired_devices = [item for item in device_inventory if item.get("condicao") in {"DANIFICADO", "VENCIDO"} or (item.get("data_validade") and str(item.get("data_validade"))[:10] < date.today().isoformat())]
-    accepted_matches = [item for item in matches if item.get("status") in {"ACEITO", "EM_TRANSITO", "CONCLUIDO"}]
-    proposed_matches = [item for item in matches if item.get("status") == "PROPOSTO"]
+    completed_matches = [item for item in matches if item.get("status") == "CONCLUIDO"]
     active_queue_count = sum(1 for item in queue if not item.get("data_saida_fila"))
     sisreg_pending_count = sum(1 for item in requests if item.get("status") == "AGUARDANDO_AUTORIZACAO")
     summary = {
@@ -3253,12 +3351,12 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
         "active_units": len(active_units),
         "patients": len(patients),
         "active_recalls": len(active_recalls),
-        "logistics_alerts": len(active_shipments) + len(low_stock) + len(proposed_matches),
+        "logistics_alerts": len(active_shipments) + len(low_stock),
         "active_devices": len(active_orders),
         "delivered_requests": len(deliveries),
         "damaged_expired_devices": len(damaged_expired_devices),
-        "reuse_matches": len(accepted_matches),
-        "pending_matches": len(proposed_matches),
+        "reuse_matches": len(completed_matches),
+        "pending_matches": 0,
         "active_queue": active_queue_count,
         "sisreg_pending": sisreg_pending_count,
     }
@@ -3439,17 +3537,6 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
             "devices": int(sum(number(item.get("quantidade")) for item in active_shipments)),
             "target": "manager_logistics",
         })
-    for item in proposed_matches[:3]:
-        alerts.append({
-            "kind": "matching",
-            "severity": "info",
-            "code": f"MATCH-{item.get('matching_id')}",
-            "product": item.get("nome_produto"),
-            "date": item.get("criado_em"),
-            "status": item.get("status"),
-            "name": f"{item.get('cre_origem_nome') or item.get('cre_origem_cnes')} → {item.get('cre_destino_nome') or item.get('cre_destino_cnes')}",
-            "target": "manager_lifecycle",
-        })
     if reports:
         alerts.append({
             "kind": "report",
@@ -3511,12 +3598,6 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
             "type": "damaged_expired", "status": item.get("condicao"),
             "description": product_by_id.get(item.get("produto_id"), {}).get("nome_produto"),
         })
-    for item in matches[:50]:
-        lifecycle_alerts.append({
-            "id": f"MATCH-{item.get('matching_id')}", "patient": f"PAC-{item.get('paciente_id') or '—'}", "date": item.get("criado_em"),
-            "type": "matching", "status": item.get("status"),
-            "description": f"{item.get('nome_produto') or 'Dispositivo'} · {item.get('cre_origem_nome') or item.get('cre_origem_cnes')} → {item.get('cre_destino_nome') or item.get('cre_destino_cnes')}",
-        })
     lifecycle_alerts = lifecycle_alerts[:100]
 
     # CREs: unidades habilitadas para OPM e/ou vinculadas a uma oficina ortopédica.
@@ -3568,6 +3649,10 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
     bpa_procedure = {item.get("id"): item.get("codigo_procedimento") for item in bpa_rows}
     apac_procedure = {item.get("id"): item.get("procedimento_sigtap") for item in apac_rows}
     for item in payments:
+        # "Gasto" representa valor efetivamente aprovado/pago; pendências e glosas
+        # não podem inflar o total financeiro da visão executiva.
+        if item.get("status_pagamento") not in {"PAGO", "APROVADO"}:
+            continue
         raw = str(item.get("competencia_faturamento") or "")
         key = f"{raw[:4]}-{raw[4:6]}" if len(raw) >= 6 else ""
         if key not in finance_months:

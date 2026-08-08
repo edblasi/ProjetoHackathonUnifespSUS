@@ -4,6 +4,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { useLang } from "../i18n/LanguageContext";
 import { apiGet, apiPatch } from "../lib/api";
 import { supabase } from "../lib/supabase";
+import { useDialogAccessibility } from "./Accessibility";
 
 interface SettingsProfile {
   nome_exibicao: string;
@@ -29,6 +30,7 @@ export function SettingsModal({ open, onClose, title, subtitle }: SettingsModalP
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(open, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -78,12 +80,12 @@ export function SettingsModal({ open, onClose, title, subtitle }: SettingsModalP
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="settings-dialog-title" tabIndex={-1} className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div>
             <div className="flex items-center gap-2 text-foreground">
               <SlidersHorizontal size={16} />
-              <h2 className="text-sm font-bold">{title ?? t("shell.settings.title")}</h2>
+              <h2 id="settings-dialog-title" className="text-sm font-bold">{title ?? t("shell.settings.title")}</h2>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{subtitle ?? t("shell.settings.subtitle")}</p>
           </div>

@@ -10,6 +10,7 @@ import {
   type SupportMessage,
   type SupportTicket,
 } from "../hooks/FetchData";
+import { useDialogAccessibility } from "./Accessibility";
 
 export type PatientSupportMode = "pain" | "contact";
 
@@ -26,6 +27,7 @@ export function PatientSupportModal({ open, mode, onClose }: { open: boolean; mo
   const [reply, setReply] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const dialogRef = useDialogAccessibility<HTMLDivElement>(open, onClose);
   const category = mode === "pain" ? "DOR" : "SUPORTE";
   const subject = mode === "pain" ? t("home.supportModal.painSubject") : t("home.supportModal.contactSubject");
 
@@ -102,8 +104,8 @@ export function PatientSupportModal({ open, mode, onClose }: { open: boolean; mo
 
   if (!open) return null;
   return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-6 py-4"><div><h2 className="text-lg font-bold text-slate-900">{mode === "pain" ? t("home.supportModal.painTitle") : t("home.supportModal.contactTitle")}</h2><p className="mt-0.5 text-xs text-slate-500">{t("home.supportModal.subtitle")}</p></div><button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button></div>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="patient-support-title" tabIndex={-1} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-200 bg-white px-6 py-4"><div><h2 id="patient-support-title" className="text-lg font-bold text-slate-900">{mode === "pain" ? t("home.supportModal.painTitle") : t("home.supportModal.contactTitle")}</h2><p className="mt-0.5 text-xs text-slate-500">{t("home.supportModal.subtitle")}</p></div><button type="button" onClick={onClose} aria-label={t("shell.accessibility.close")} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" aria-hidden="true" /></button></div>
       <div className="space-y-5 p-6">
         <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">{t("home.supportModal.relatedCre")}</p>{contextLoading ? <p className="mt-1 text-sm text-slate-500">…</p> : contextError ? <p className="mt-1 text-sm text-red-600">{contextError}</p> : <><p className="mt-1 text-sm font-bold text-slate-900">{context?.nome ?? "—"}</p><p className="text-xs text-slate-500">CNES {context?.cnes ?? "—"}{context?.endereco ? ` · ${context.endereco}` : ""}</p></>}</div>
 
@@ -117,7 +119,7 @@ export function PatientSupportModal({ open, mode, onClose }: { open: boolean; mo
 
         {channel === "thread" && selected && <div className="rounded-xl border border-slate-200"><div className="border-b border-slate-100 px-5 py-4"><div className="flex items-center justify-between"><div><p className="text-sm font-bold text-slate-900">{selected.assunto}</p><p className="text-[11px] text-slate-500">#{selected.id} · {t(`home.supportModal.status.${selected.status}` as any)}</p></div><button type="button" onClick={() => setChannel("choice")} className="text-xs font-semibold text-blue-700">{t("home.supportModal.newContact")}</button></div></div><div className="max-h-72 space-y-3 overflow-y-auto bg-slate-50 p-4">{thread.map((item) => <div key={item.id} className={`max-w-[85%] rounded-xl px-4 py-3 ${item.autor_papel === "PACIENTE" ? "ml-auto bg-[#0B5394] text-white" : "bg-white border border-slate-200 text-slate-800"}`}><p className="text-[10px] font-bold uppercase tracking-wider opacity-70">{item.autor_papel === "PACIENTE" ? t("home.supportModal.you") : t("home.supportModal.creTeam")}</p><p className="mt-1 whitespace-pre-wrap text-sm">{item.mensagem}</p>{item.orientacao !== "NENHUMA" && <p className="mt-2 text-[10px] font-bold uppercase opacity-80">{t(`home.supportModal.guidance.${item.orientacao}` as any)}</p>}<p className="mt-1 text-[10px] opacity-60">{new Date(item.criado_em).toLocaleString(locale)}</p></div>)}</div>{selected.status !== "ENCERRADO" && <div className="flex gap-2 border-t border-slate-100 p-4"><textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={2} placeholder={t("home.supportModal.replyPlaceholder")} className="min-h-[44px] flex-1 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm"/><button type="button" onClick={() => void sendReply()} disabled={busy || !reply.trim()} className="self-end rounded-lg bg-[#0B5394] p-3 text-white disabled:opacity-40"><Send className="h-4 w-4"/></button></div>}</div>}
 
-        {feedback && <p className={`rounded-lg px-3 py-2 text-xs font-medium ${feedback === t("home.supportModal.sent") || feedback === t("home.supportModal.creNotified") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{feedback}</p>}
+        {feedback && <p role="status" aria-live="polite" className={`rounded-lg px-3 py-2 text-xs font-medium ${feedback === t("home.supportModal.sent") || feedback === t("home.supportModal.creNotified") ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{feedback}</p>}
 
         {!!recentTickets.length && channel !== "thread" && <div><div className="mb-2 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("home.supportModal.myConversations")}</h3><span className="text-[10px] text-slate-400">{recentTickets.length}</span></div><div className="space-y-2">{recentTickets.map((ticket) => <button type="button" key={ticket.id} onClick={() => void openThread(ticket)} className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left hover:bg-slate-50"><div><p className="text-xs font-bold text-slate-800">{ticket.assunto}</p><p className="mt-0.5 line-clamp-1 text-[11px] text-slate-500">{ticket.ultima_mensagem?.mensagem ?? "—"}</p></div><span className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500">{t(`home.supportModal.status.${ticket.status}` as any)}</span></button>)}</div></div>}
 

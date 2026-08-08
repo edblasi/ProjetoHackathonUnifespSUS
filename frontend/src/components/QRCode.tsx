@@ -38,6 +38,7 @@ export function QRCodePlaceholder({ size = 140, value = "UMDR" }: QRCodePlacehol
     <div
       className="inline-grid bg-white p-3 rounded-lg border border-border"
       style={{ gridTemplateColumns: "repeat(21, 1fr)", gap: "1px", width: size, height: size }}
+      role="img"
       aria-label="QR Code da identidade digital do dispositivo"
       title={value}
     >

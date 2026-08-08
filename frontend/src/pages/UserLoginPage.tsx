@@ -23,6 +23,7 @@ import { LanguageToggle } from "../components/LanguageToggle";
 import { Stepper } from "../components/Stepper";
 import { usePacientePerfil, usePedidos, type UsuarioSistema } from "../hooks/FetchData";
 import { apiGet, apiPost } from "../lib/api";
+import { useAccessiblePage } from "../components/Accessibility";
 
 // ─── Carousel data (left panel imagery) ────────────────────────────────────
 
@@ -36,6 +37,7 @@ const slidePhotos = [
 
 function LoginStep() {
   const { t } = useLang();
+  useAccessiblePage(t("auth.login.portalTitle"), t("auth.login.portalSubtitle"));
   const { signIn, signInFirstAccess } = useAuth();
   const [slide, setSlide] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
@@ -176,7 +178,7 @@ function LoginStep() {
       </div>
 
       {/* ── Right: Form panel ─────────────────────────────────────────────── */}
-      <div className="relative flex-1 flex flex-col items-center justify-center bg-white px-6 py-16 lg:py-0">
+      <div id="main-content" role="main" tabIndex={-1} className="relative flex-1 flex flex-col items-center justify-center bg-white px-6 py-16 lg:py-0">
         <div className="absolute right-5 top-5 z-30 lg:right-8 lg:top-7">
           <LanguageToggle />
         </div>
@@ -209,10 +211,11 @@ function LoginStep() {
                   <p className="mt-1">{t("auth.login.firstAccessHelp")}</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.cpfLabel")}</label>
+                  <label htmlFor="first-access-cpf" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.cpfLabel")}</label>
                   <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-border bg-input-background focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)] transition-all duration-200">
                     <CreditCard size={14} className="text-muted-foreground shrink-0" />
                     <input
+                      id="first-access-cpf"
                       inputMode="numeric"
                       value={cpf}
                       onChange={(e) => setCpf(e.target.value.replace(/\D/g, "").slice(0, 11))}
@@ -223,10 +226,11 @@ function LoginStep() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.fullNameLabel")}</label>
+                  <label htmlFor="first-access-name" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.fullNameLabel")}</label>
                   <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-border bg-input-background focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)] transition-all duration-200">
                     <User size={14} className="text-muted-foreground shrink-0" />
                     <input
+                      id="first-access-name"
                       type="text"
                       value={firstAccessName}
                       onChange={(e) => setFirstAccessName(e.target.value)}
@@ -237,10 +241,11 @@ function LoginStep() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.birthDateLabel")}</label>
+                  <label htmlFor="first-access-birth-date" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.birthDateLabel")}</label>
                   <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-border bg-input-background focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)] transition-all duration-200">
                     <CalendarDays size={14} className="text-muted-foreground shrink-0" />
                     <input
+                      id="first-access-birth-date"
                       type="text"
                       inputMode="numeric"
                       value={firstAccessBirthDate}
@@ -256,18 +261,18 @@ function LoginStep() {
             ) : (
               <>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.emailLabel")}</label>
+                  <label htmlFor="login-email" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.emailLabel")}</label>
                   <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-border bg-input-background focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)] transition-all duration-200">
                     <Mail size={14} className="text-muted-foreground shrink-0" />
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.login.emailPlaceholder")} autoComplete="email" className="flex-1 bg-transparent text-sm text-foreground outline-none" />
+                    <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth.login.emailPlaceholder")} autoComplete="email" className="flex-1 bg-transparent text-sm text-foreground outline-none" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.passwordLabel")}</label>
+                  <label htmlFor="login-password" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.login.passwordLabel")}</label>
                   <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-border bg-input-background focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)] transition-all duration-200">
                     <Lock size={14} className="text-muted-foreground shrink-0" />
-                    <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} autoComplete="current-password" className="flex-1 bg-transparent text-sm text-foreground outline-none" />
-                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-muted-foreground hover:text-foreground transition-colors">
+                    <input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleLogin()} autoComplete="current-password" className="flex-1 bg-transparent text-sm text-foreground outline-none" />
+                    <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={t(showPassword ? "shell.accessibility.hidePassword" : "shell.accessibility.showPassword")} aria-controls="login-password" className="text-muted-foreground hover:text-foreground transition-colors">
                       {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
                   </div>
@@ -352,6 +357,7 @@ function LoginStep() {
 
 function VerifyStep({ onContinue, onBack }: { onContinue: () => void; onBack: () => void }) {
   const { t, locale } = useLang();
+  useAccessiblePage(t("auth.verify.welcome"), t("auth.verify.confirmInfo"));
   const { data: perfil, loading: loadingPerfil } = usePacientePerfil();
   const { data: pedidos, loading: loadingPedidos } = usePedidos();
   const pedidoAtual = pedidos?.[0] ?? null;
@@ -393,7 +399,7 @@ function VerifyStep({ onContinue, onBack }: { onContinue: () => void; onBack: ()
         <Stepper steps={[t("auth.stepper.login"), t("auth.stepper.verify"), t("auth.stepper.credentials")]} currentStep={1} />
       </div>
 
-      <main className="max-w-xl mx-auto px-6 py-10">
+      <main id="main-content" tabIndex={-1} className="max-w-xl mx-auto px-6 py-10">
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center">
@@ -467,6 +473,7 @@ function VerifyStep({ onContinue, onBack }: { onContinue: () => void; onBack: ()
 
 function CredentialsStep({ onBack }: { onBack: () => void }) {
   const { t } = useLang();
+  useAccessiblePage(t("auth.credentials.title"), t("auth.credentials.subtitle"));
   const { signOut, signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -499,7 +506,7 @@ function CredentialsStep({ onBack }: { onBack: () => void }) {
       <div className="max-w-xl mx-auto px-6 pt-6">
         <Stepper steps={[t("auth.stepper.login"), t("auth.stepper.verify"), t("auth.stepper.credentials")]} currentStep={2} />
       </div>
-      <main className="max-w-xl mx-auto px-6 py-10">
+      <main id="main-content" tabIndex={-1} className="max-w-xl mx-auto px-6 py-10">
         <div className="mb-8 flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-primary/8 border border-primary/15 flex items-center justify-center">
             <CheckCircle2 size={23} className="text-primary" />
@@ -517,7 +524,7 @@ function CredentialsStep({ onBack }: { onBack: () => void }) {
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.credentials.emailLabel")}</span>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-input-background px-4 py-3.5 focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)]">
                 <Mail size={14} className="shrink-0 text-muted-foreground" />
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={t("auth.credentials.emailPlaceholder")} className="flex-1 bg-transparent text-sm text-foreground outline-none" />
+                <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder={t("auth.credentials.emailPlaceholder")} className="flex-1 bg-transparent text-sm text-foreground outline-none" />
               </div>
             </label>
 
@@ -525,8 +532,8 @@ function CredentialsStep({ onBack }: { onBack: () => void }) {
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("auth.credentials.passwordLabel")}</span>
               <div className="flex items-center gap-3 rounded-xl border border-border bg-input-background px-4 py-3.5 focus-within:border-primary/40 focus-within:shadow-[0_0_0_3px_rgba(11,83,148,0.08)]">
                 <Lock size={14} className="shrink-0 text-muted-foreground" />
-                <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} autoComplete="new-password" className="flex-1 bg-transparent text-sm text-foreground outline-none" />
-                <button type="button" onClick={() => setShowPassword((value) => !value)} className="text-muted-foreground hover:text-foreground">{showPassword ? <EyeOff size={13} /> : <Eye size={13} />}</button>
+                <input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} autoComplete="new-password" className="flex-1 bg-transparent text-sm text-foreground outline-none" />
+                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={t(showPassword ? "shell.accessibility.hidePassword" : "shell.accessibility.showPassword")} aria-controls="credentials-password" className="text-muted-foreground hover:text-foreground">{showPassword ? <EyeOff size={13} /> : <Eye size={13} />}</button>
               </div>
               <span className="text-[11px] text-muted-foreground">{t("auth.credentials.passwordHelp")}</span>
             </label>

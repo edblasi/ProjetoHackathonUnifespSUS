@@ -80,7 +80,7 @@ export function DashboardCustomizer<T extends string>({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-[80] w-72 rounded-xl border border-border bg-white p-4 shadow-xl">
+        <div className="fixed left-4 right-4 top-20 z-[80] rounded-xl border border-border bg-white p-4 shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-72">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-foreground">{t("shell.cards.title")}</p>

@@ -125,9 +125,9 @@ export function CommunicationsCenter({ role }: CommunicationsCenterProps) {
           <h1 className="mt-1 text-2xl font-bold text-slate-900">{tr("communications.title")}</h1>
           <p className="mt-1 text-sm text-slate-500">{tr("communications.subtitle")}</p>
         </div>
-        <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-          <button type="button" onClick={() => setTab("alert")} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${tab === "alert" ? "bg-blue-700 text-white" : "text-slate-500 hover:bg-slate-50"}`}><BellRing size={14} />{tr("communications.tabs.alert")}</button>
-          <button type="button" onClick={() => setTab("recall")} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${tab === "recall" ? "bg-red-600 text-white" : "text-slate-500 hover:bg-slate-50"}`}><ShieldAlert size={14} />{tr("communications.tabs.recall")}</button>
+        <div role="tablist" aria-label={tr("communications.title")} className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button type="button" role="tab" aria-selected={tab === "alert"} onClick={() => setTab("alert")} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${tab === "alert" ? "bg-blue-700 text-white" : "text-slate-500 hover:bg-slate-50"}`}><BellRing size={14} />{tr("communications.tabs.alert")}</button>
+          <button type="button" role="tab" aria-selected={tab === "recall"} onClick={() => setTab("recall")} className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${tab === "recall" ? "bg-red-600 text-white" : "text-slate-500 hover:bg-slate-50"}`}><ShieldAlert size={14} />{tr("communications.tabs.recall")}</button>
         </div>
       </div>
 
@@ -161,7 +161,7 @@ export function CommunicationsCenter({ role }: CommunicationsCenterProps) {
           </form>
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="text-sm font-bold text-slate-900">{tr("communications.recentRecalls")}</h2><p className="mt-0.5 text-xs text-slate-500">{tr("communications.recentRecallsHint")}</p></div><button type="button" onClick={recalls.reload} className="rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-blue-600"><RefreshCw size={15} /></button></div>
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="text-sm font-bold text-slate-900">{tr("communications.recentRecalls")}</h2><p className="mt-0.5 text-xs text-slate-500">{tr("communications.recentRecallsHint")}</p></div><button type="button" onClick={recalls.reload} aria-label={t("shell.accessibility.refresh")} className="rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-blue-600"><RefreshCw size={15} aria-hidden="true" /></button></div>
             <div className="max-h-[520px] divide-y divide-slate-100 overflow-y-auto">
               {recalls.loading && !recalls.data ? <p className="p-5 text-xs text-slate-400">…</p> : (recalls.data ?? []).length === 0 ? <p className="p-5 text-xs text-slate-400">{tr("communications.noRecalls")}</p> : (recalls.data ?? []).map((recall) => <div key={recall.id} className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold text-slate-900">{recall.nome_produto}</p><p className="mt-0.5 font-mono text-[11px] text-slate-500">{recall.codigo_lote}</p></div><span className="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700">{recall.status}</span></div><p className="mt-2 text-xs leading-relaxed text-slate-600">{recall.motivo}</p><p className="mt-2 text-[10px] text-slate-400">{new Date(`${recall.data_abertura}T00:00:00`).toLocaleDateString(locale)} · {recall.affected_devices} {tr("communications.devices")}</p></div>)}
             </div>
