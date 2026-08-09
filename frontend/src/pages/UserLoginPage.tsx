@@ -130,7 +130,7 @@ function LoginStep() {
             </div>
             <div>
               <div className="text-white font-bold text-base tracking-tight leading-none" style={{ fontFamily: "Inter, sans-serif" }}>
-                UMDR
+                REVITA
               </div>
               <div className="text-cyan-300/60 text-[9px] uppercase tracking-widest leading-none mt-0.5">
                 {t("shell.topnav.brandFull")}
