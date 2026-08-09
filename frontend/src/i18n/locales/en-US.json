@@ -407,8 +407,7 @@
       "noRecentAlerts": "No recent alerts."
     },
     "footer": {
-      "copyright": "© 2026 Ministry of Health — Unified Health System (SUS)",
-      "compliance": "Secure platform certified by INCA/ANVISA"
+      "copyright": "© 2026 Ministry of Health — Unified Health System (SUS)"
     },
     "topnav": {
       "back": "Back",
@@ -686,7 +685,7 @@
       "slide3": {
         "tag": "Device Identity",
         "headline": "A digital ID\nfor every\nmedical device.",
-        "sub": "UMDR assigns a unique identifier to each orthosis — keeping your record complete."
+        "sub": "REVITA assigns a unique identifier to each orthosis — keeping your record complete."
       },
       "portalTitle": "Access Portal",
       "portalSubtitle": "Enter your credentials to access your portal.",

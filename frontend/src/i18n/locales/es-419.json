@@ -407,8 +407,7 @@
       "noRecentAlerts": "No hay alertas recientes."
     },
     "footer": {
-      "copyright": "© 2026 Ministerio de Salud — Sistema Único de Salud (SUS)",
-      "compliance": "Plataforma segura certificada por INCA/ANVISA"
+      "copyright": "© 2026 Ministerio de Salud — Sistema Único de Salud (SUS)"
     },
     "topnav": {
       "back": "Atrás",
@@ -686,7 +685,7 @@
       "slide3": {
         "tag": "Identidad del Dispositivo",
         "headline": "Una identidad digital\npara cada\ndispositivo médico.",
-        "sub": "El UMDR asigna un identificador único a cada órtesis — manteniendo su registro completo."
+        "sub": "El REVITA asigna un identificador único a cada órtesis — manteniendo su registro completo."
       },
       "portalTitle": "Portal de Acceso",
       "portalSubtitle": "Ingrese sus credenciales para acceder a su portal.",

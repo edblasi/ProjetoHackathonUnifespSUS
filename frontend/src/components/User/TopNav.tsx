@@ -38,7 +38,7 @@ export function TopNav({ onBack, backLabel, rightSlot }: TopNavProps) {
               className="font-semibold text-foreground text-sm"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              UMDR
+              REVITA
             </span>
             <span className="text-muted-foreground/50 text-xs hidden sm:block">
               {t("shell.topnav.brandFull")}

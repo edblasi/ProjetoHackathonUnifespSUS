@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Search, Bell, X, ChevronDown, Settings, LogOut, Mail } from "lucide-react";
+import { Search, Bell, X, Mail, Shield, BadgeCheck, Phone, MapPin } from "lucide-react";
 import { useLang } from "../i18n/LanguageContext";
-import { Avatar } from "./Avatar";
 import { LanguageToggle } from "./LanguageToggle";
+import { ProfilePopup } from "./ProfilePopup";
 
 export interface NavbarNotification {
   id?: string | number;
@@ -48,7 +48,6 @@ export function Navbar({
   const { t } = useLang();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
-  const shortName = userName.split(" ").slice(0, 2).join(" ");
   const subtitle = brandSubtitle ?? t("shell.navbar.brandSubtitle");
   const roleLabel = userRoleLabel ?? t("shell.navbar.userRoleLabel");
   const alertItems = notifications?.length ? notifications.slice(0, 5) : notification ? [notification] : [];
@@ -112,39 +111,35 @@ export function Navbar({
             )}
           </div>
 
-          {onOpenSettings && (
-            <button type="button" onClick={() => { setShowNotif(false); setShowDropdown(false); onOpenSettings(); }} className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.settings")} title={t("shell.navbar.settings")}>
-              <Settings className="w-4 h-4" />
-            </button>
-          )}
-
           <div className="relative">
-            <button onClick={() => { setShowDropdown(!showDropdown); setShowNotif(false); }} className="flex items-center gap-1.5 sm:gap-2.5 pl-1 pr-1 sm:pr-3 py-1 rounded-lg hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label={t("shell.navbar.myProfile")} aria-expanded={showDropdown} aria-controls="patient-profile-menu">
-              <Avatar initials={userInitials} size="sm" />
-              <div className="text-left hidden sm:block">
-                <div className="text-sm font-medium text-foreground leading-none">{shortName}</div>
-                <div className="text-[11px] text-muted-foreground leading-none mt-0.5">{roleLabel}</div>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${showDropdown ? "rotate-180" : ""}`} />
+            <button
+              type="button"
+              onClick={() => { setShowDropdown(!showDropdown); setShowNotif(false); }}
+              className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label={t("shell.navbar.myProfile")}
+              aria-expanded={showDropdown}
+            >
+              {userInitials}
             </button>
             {showDropdown && (
-              <div id="patient-profile-menu" role="region" aria-label={t("shell.accessibility.profileMenu")} className="fixed left-4 right-4 top-[4.5rem] sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80 bg-white rounded-xl border border-border shadow-lg z-50 overflow-hidden" style={{ boxShadow: "0 8px 32px rgba(0,86,172,0.12)" }}>
-                <div className="bg-gradient-to-br from-primary to-[#0A4880] px-5 py-4 text-white">
-                  <div className="flex items-center gap-3">
-                    <Avatar initials={userInitials} size="md" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold truncate">{userName}</p>
-                      <p className="text-xs text-white/75">{roleLabel}</p>
-                      {userEmail && <p className="mt-1 flex items-center gap-1 text-[11px] text-white/80 truncate"><Mail size={11} />{userEmail}</p>}
-                    </div>
-                  </div>
-                </div>
-                {!!profileDetails.length && <div className="divide-y divide-border px-4 py-1">{profileDetails.map((detail) => <div key={detail.label} className="flex items-start justify-between gap-4 py-2.5"><span className="text-[11px] text-muted-foreground">{detail.label}</span><span className="max-w-[60%] text-right text-xs font-medium text-foreground break-words">{detail.value || "—"}</span></div>)}</div>}
-                <div className="border-t border-border p-2">
-                  {onOpenSettings && <button onClick={() => { setShowDropdown(false); onOpenSettings(); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground rounded-lg hover:bg-secondary transition-colors"><Settings className="w-4 h-4 text-muted-foreground" /> {t("shell.navbar.settings")}</button>}
-                  <button onClick={onSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-destructive rounded-lg hover:bg-red-50 transition-colors"><LogOut className="w-4 h-4" /> {t("shell.navbar.signOut")}</button>
-                </div>
-              </div>
+              <ProfilePopup
+                initials={userInitials}
+                name={userName}
+                subtitle={roleLabel}
+                details={[
+                  ...(userEmail ? [{ icon: Mail, label: t("shell.profile.email"), value: userEmail }] : []),
+                  ...profileDetails.map((detail, index) => ({
+                    icon: [Shield, BadgeCheck, BadgeCheck, Phone, MapPin][index] ?? Shield,
+                    label: detail.label,
+                    value: detail.value,
+                  })),
+                ]}
+                settingsLabel={t("shell.navbar.settings")}
+                logoutLabel={t("shell.navbar.signOut")}
+                onClose={() => setShowDropdown(false)}
+                onOpenSettings={onOpenSettings}
+                onLogout={onSignOut}
+              />
             )}
           </div>
         </div>

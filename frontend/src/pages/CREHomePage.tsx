@@ -7,6 +7,7 @@ import { Card } from "../components/Card";
 import { ErrorState, LoadingState } from "../components/DataState";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { SettingsModal } from "../components/SettingsModal";
+import { ProfilePopup as SharedProfilePopup } from "../components/ProfilePopup";
 import { CommunicationsCenter } from "../components/CommunicationsCenter";
 import { CreSupportInbox } from "../components/CreSupportInbox";
 import { ShipmentModal, TriageModal } from "../components/CreActionModals";
@@ -319,7 +320,6 @@ function Sidebar({ current, onNavigate, onOpenSettings, open, onClose }: Sidebar
 
 function ProfilePopup({ onClose, onOpenSettings }: { onClose: () => void; onOpenSettings: () => void }) {
   const { t } = useLang();
-  const dialogRef = useDialogAccessibility<HTMLDivElement>(true, onClose);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { data: usuario } = useUsuarioAtual();
@@ -339,57 +339,23 @@ function ProfilePopup({ onClose, onOpenSettings }: { onClose: () => void; onOpen
   };
 
   return (
-    <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t("shell.accessibility.profileMenu")} tabIndex={-1} className="fixed left-4 right-4 top-16 z-50 bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-72" style={{ fontFamily: "Inter, sans-serif" }}>
-        <div className="px-5 py-4 bg-gradient-to-br from-blue-700 to-blue-800 flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center text-white font-bold text-lg">{iniciais}</div>
-            <div>
-              <p className="text-sm font-bold text-white">{usuario?.nome_exibicao ?? "—"}</p>
-              <p className="text-xs text-blue-200 font-medium">{t("profile.role")}</p>
-              {usuario?.cnes_vinculo && (
-                <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded-full">
-                  <BadgeCheck className="w-3 h-3" /> #{usuario.cnes_vinculo}
-                </span>
-              )}
-            </div>
-          </div>
-          <button type="button" onClick={onClose} aria-label={t("shell.accessibility.close")} className="text-white/60 hover:text-white transition-colors mt-0.5">
-            <X className="w-4 h-4" aria-hidden="true" />
-          </button>
-        </div>
-        <div className="px-5 py-4 space-y-3 border-b border-slate-100">
-          {[
-            { icon: Mail,      label: t("shell.profile.email"), value: user?.email ?? "—" },
-            { icon: Building2, label: t("profile.unit"),        value: usuario?.unidade_nome ?? t("profile.unitValue") },
-            { icon: Shield,    label: t("profile.profile"),     value: t("profile.roleValue") },
-            { icon: BadgeCheck,label: t("shell.profile.cnes"),  value: usuario?.cnes_vinculo ?? "—" },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                <Icon className="w-3.5 h-3.5 text-slate-500" strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
-                <p className="text-xs font-medium text-slate-700 truncate">{value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="px-4 py-3 flex gap-2">
-          <button type="button" onClick={() => { onClose(); onOpenSettings(); }} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
-            <Settings className="w-3.5 h-3.5" /> {t("profile.settings")}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" /> {t("profile.logout")}
-          </button>
-        </div>
-      </div>
-    </>
+    <SharedProfilePopup
+      initials={iniciais}
+      name={usuario?.nome_exibicao ?? "—"}
+      subtitle={t("profile.role")}
+      badge={usuario?.cnes_vinculo ? `#${usuario.cnes_vinculo}` : null}
+      details={[
+        { icon: Mail, label: t("shell.profile.email"), value: user?.email ?? "—" },
+        { icon: Building2, label: t("profile.unit"), value: usuario?.unidade_nome ?? t("profile.unitValue") },
+        { icon: Shield, label: t("profile.profile"), value: t("profile.roleValue") },
+        { icon: BadgeCheck, label: t("shell.profile.cnes"), value: usuario?.cnes_vinculo ?? "—" },
+      ]}
+      settingsLabel={t("profile.settings")}
+      logoutLabel={t("profile.logout")}
+      onClose={onClose}
+      onOpenSettings={onOpenSettings}
+      onLogout={handleLogout}
+    />
   );
 }
 
@@ -464,6 +430,7 @@ function Topbar({ page, onNavigate, onOpenSettings, onOpenMenu }: { page: Page; 
         </div>
         <div className="relative">
           <button
+            type="button"
             onClick={() => setProfileOpen((o) => !o)}
             aria-label={t("shell.navbar.myProfile")}
             aria-expanded={profileOpen}

@@ -62,6 +62,7 @@ import { Card } from "../components/Card";
 import { DashboardCustomizer, useDashboardCardPreferences } from "../components/DashboardCustomizer";
 import { LanguageToggle } from "../components/LanguageToggle";
 import { SettingsModal } from "../components/SettingsModal";
+import { ProfilePopup as SharedProfilePopup } from "../components/ProfilePopup";
 import { CommunicationsCenter } from "../components/CommunicationsCenter";
 import { EmptyState, ErrorState, LoadingState } from "../components/DataState";
 import { useAuth } from "../contexts/AuthContext";
@@ -1625,37 +1626,29 @@ export function ManagerHomePage() {
               <button
                 type="button"
                 onClick={() => setProfileOpen((value) => !value)}
-                className="w-8 h-8 rounded-full bg-[#1565C0] flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
+                className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-xs font-bold text-white hover:ring-2 hover:ring-blue-400 hover:ring-offset-1 transition-all"
+                aria-label={t("shell.navbar.myProfile")}
                 aria-expanded={profileOpen}
               >
                 {initials}
               </button>
               {profileOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                  <div className="fixed left-4 right-4 top-16 z-50 overflow-hidden rounded-xl border border-border bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:w-80">
-                    <div className="bg-gradient-to-br from-[#1565C0] to-[#0A4880] px-5 py-4 text-white">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/40 bg-white/15 text-sm font-bold">{initials}</div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold">{managerName}</p>
-                          <p className="text-xs text-white/75">{t("manager.standard.executiveAccess")}</p>
-                        </div>
-                        <button type="button" onClick={() => setProfileOpen(false)} className="ml-auto text-white/70 hover:text-white"><X size={15} /></button>
-                      </div>
-                    </div>
-                    <div className="divide-y divide-border px-4 py-1">
-                      <div className="flex items-start justify-between gap-4 py-2.5"><span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Mail size={11} />{t("shell.profile.email")}</span><span className="max-w-[62%] break-all text-right text-xs font-medium text-foreground">{user?.email ?? "—"}</span></div>
-                      <div className="flex items-start justify-between gap-4 py-2.5"><span className="text-[11px] text-muted-foreground">{t("shell.profile.role")}</span><span className="text-right text-xs font-medium text-foreground">{t("manager.standard.manager")}</span></div>
-                      <div className="flex items-start justify-between gap-4 py-2.5"><span className="text-[11px] text-muted-foreground">{t("shell.profile.access")}</span><span className="text-right text-xs font-medium text-foreground">{t("manager.standard.executiveAccess")}</span></div>
-                      <div className="flex items-start justify-between gap-4 py-2.5"><span className="text-[11px] text-muted-foreground">{t("shell.profile.lastSignIn")}</span><span className="text-right text-xs font-medium text-foreground">{user?.last_sign_in_at ? formatDateTime(user.last_sign_in_at, locale) : "—"}</span></div>
-                    </div>
-                    <div className="border-t border-border p-2">
-                      <button type="button" onClick={() => { setProfileOpen(false); setSettingsOpen(true); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-muted"><Settings size={14} className="text-muted-foreground" />{t("shell.navbar.settings")}</button>
-                      <button type="button" onClick={() => void handleLogout()} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-50"><LogOut size={14} />{t("shell.navbar.signOut")}</button>
-                    </div>
-                  </div>
-                </>
+                <SharedProfilePopup
+                  initials={initials}
+                  name={managerName}
+                  subtitle={t("manager.standard.executiveAccess")}
+                  details={[
+                    { icon: Mail, label: t("shell.profile.email"), value: user?.email ?? "—" },
+                    { icon: ShieldCheck, label: t("shell.profile.role"), value: t("manager.standard.manager") },
+                    { icon: Lock, label: t("shell.profile.access"), value: t("manager.standard.executiveAccess") },
+                    { icon: Clock, label: t("shell.profile.lastSignIn"), value: user?.last_sign_in_at ? formatDateTime(user.last_sign_in_at, locale) : "—" },
+                  ]}
+                  settingsLabel={t("shell.navbar.settings")}
+                  logoutLabel={t("shell.navbar.signOut")}
+                  onClose={() => setProfileOpen(false)}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                  onLogout={handleLogout}
+                />
               )}
             </div>
           </div>
