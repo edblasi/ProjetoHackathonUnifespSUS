@@ -1173,10 +1173,10 @@ class CreSupportReply(BaseModel):
 
 @app.get("/api/cre/support/tickets")
 async def cre_support_tickets(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
-    filters = None if identity.papel == "GESTOR" else {"cnes_destino": f"eq.{identity.cnes_vinculo}"}
-    if identity.papel == "FISCAL_CRE" and not identity.cnes_vinculo:
+    require_roles(identity, "FISCAL_CRE")
+    if not identity.cnes_vinculo:
         raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+    filters = {"cnes_destino": f"eq.{identity.cnes_vinculo}"}
     tickets = await db_select("app", "atendimento_paciente", filters=filters, order="atualizado_em.desc", limit=500)
     patient_ids = sorted({ticket.get("paciente_id") for ticket in tickets if ticket.get("paciente_id")})
     patients: dict[int, dict[str, Any]] = {}
@@ -1191,11 +1191,12 @@ async def cre_support_tickets(identity: Identity = Depends(current_identity)) ->
 
 
 async def _ensure_cre_ticket_access(ticket_id: int, identity: Identity) -> dict[str, Any]:
-    filters = {"id": f"eq.{ticket_id}"}
-    if identity.papel == "FISCAL_CRE":
-        if not identity.cnes_vinculo:
-            raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
-        filters["cnes_destino"] = f"eq.{identity.cnes_vinculo}"
+    if not identity.cnes_vinculo:
+        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+    filters = {
+        "id": f"eq.{ticket_id}",
+        "cnes_destino": f"eq.{identity.cnes_vinculo}",
+    }
     rows = await db_select("app", "atendimento_paciente", filters=filters, limit=1)
     if not rows:
         raise HTTPException(status_code=404, detail="Atendimento não encontrado para esta unidade.")
@@ -1204,14 +1205,14 @@ async def _ensure_cre_ticket_access(ticket_id: int, identity: Identity) -> dict[
 
 @app.get("/api/cre/support/tickets/{ticket_id}/messages")
 async def cre_support_messages(ticket_id: int, identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
+    require_roles(identity, "FISCAL_CRE")
     await _ensure_cre_ticket_access(ticket_id, identity)
     return await db_select("app", "atendimento_mensagem", filters={"atendimento_id": f"eq.{ticket_id}"}, order="criado_em.asc", limit=500)
 
 
 @app.post("/api/cre/support/tickets/{ticket_id}/messages", status_code=201)
 async def cre_support_reply(ticket_id: int, payload: CreSupportReply, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
+    require_roles(identity, "FISCAL_CRE")
     ticket = await _ensure_cre_ticket_access(ticket_id, identity)
     rows = await db_insert("app", "atendimento_mensagem", {
         "atendimento_id": ticket_id,
@@ -1243,19 +1244,15 @@ async def cre_support_reply(ticket_id: int, payload: CreSupportReply, identity: 
 # -----------------------------------------------------------------------------
 
 async def cre_identity(identity: Identity) -> Identity:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
+    require_roles(identity, "FISCAL_CRE")
+    if not identity.cnes_vinculo:
+        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
     return identity
 
 
 @app.get("/api/cre/kpis")
 async def cre_kpis(identity: Identity = Depends(current_identity)) -> dict[str, Any]:
     await cre_identity(identity)
-    if identity.papel != "FISCAL_CRE":
-        rows = await db_select("fila", "vw_kpi_dashboard", limit=1)
-        return rows[0] if rows else {"fila_ativa": 0, "estoque_proteses": 0, "em_logistica_reversa": 0, "matchings_mes": 0}
-    if not identity.cnes_vinculo:
-        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
-
     cnes = str(identity.cnes_vinculo).strip()
     rows = await db_select(
         "fila",
@@ -1335,32 +1332,48 @@ async def cre_alerts(identity: Identity = Depends(current_identity)) -> list[dic
     return result
 
 
-@app.get("/api/cre/recalls")
-async def cre_recalls(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
-    await cre_identity(identity)
-    cnes = str(identity.cnes_vinculo or "").strip()
-    if not cnes:
-        return []
-
+async def _cre_local_lots(cnes: str) -> tuple[set[str], int]:
     workshops = await db_select(
         "producao", "oficina_ortopedica",
         select="id", filters={"cnes": f"eq.{cnes}", "ativo": "eq.true"}, limit=20,
     )
     workshop_ids = [int(row["id"]) for row in workshops if row.get("id") is not None]
     if not workshop_ids:
-        return []
+        return set(), 0
+
+    local_lots: set[str] = set()
+    physical = await db_select(
+        "producao", "estoque_dispositivo", select="id,lote_fabricante",
+        filters={"oficina_id": f"in.({','.join(map(str, workshop_ids))})"}, limit=5000,
+    )
+    local_lots.update(
+        str(row.get("lote_fabricante") or "").strip()
+        for row in physical if row.get("lote_fabricante")
+    )
+
     stock = await db_select(
         "producao", "material_estoque", select="id",
         filters={"oficina_id": f"in.({','.join(map(str, workshop_ids))})"}, limit=5000,
     )
     material_ids = [int(row["id"]) for row in stock if row.get("id") is not None]
-    if not material_ids:
-        return []
-    movements = await db_select(
-        "producao", "movimentacao_estoque", select="lote_fabricante",
-        filters={"material_estoque_id": f"in.({','.join(map(str, material_ids))})"}, limit=5000,
-    )
-    local_lots = {str(row.get("lote_fabricante") or "").strip() for row in movements if row.get("lote_fabricante")}
+    if material_ids:
+        movements = await db_select(
+            "producao", "movimentacao_estoque", select="lote_fabricante",
+            filters={"material_estoque_id": f"in.({','.join(map(str, material_ids))})"}, limit=5000,
+        )
+        local_lots.update(
+            str(row.get("lote_fabricante") or "").strip()
+            for row in movements if row.get("lote_fabricante")
+        )
+    local_lots.discard("")
+    return local_lots, len(physical)
+
+
+@app.get("/api/cre/recalls")
+async def cre_recalls(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
+    await cre_identity(identity)
+    cnes = str(identity.cnes_vinculo).strip()
+    local_lots, _ = await _cre_local_lots(cnes)
     if not local_lots:
         return []
     recalls = await db_select("app", "recall", order="data_abertura.desc", limit=100)
@@ -1370,22 +1383,21 @@ async def cre_recalls(identity: Identity = Depends(current_identity)) -> list[di
 @app.get("/api/cre/flow")
 async def cre_flow(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    return await db_select("fila", "vw_fluxo_dispositivos_mensal", order="mes.asc")
+    cnes = str(identity.cnes_vinculo).strip()
+    return await db_select(
+        "fila", "vw_fluxo_dispositivos_mensal",
+        filters={"cre_destino_cnes": f"eq.{cnes}"}, order="mes.asc",
+    )
 
 
 @app.get("/api/cre/patients")
 async def cre_patients(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    filters: dict[str, Any] | None = None
-    if identity.papel == "FISCAL_CRE":
-        if not identity.cnes_vinculo:
-            raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
-        filters = {"cre_destino_cnes": f"eq.{str(identity.cnes_vinculo).strip()}"}
-
+    cnes = str(identity.cnes_vinculo).strip()
     return await db_select(
         "fila",
         "vw_pacientes_cre",
-        filters=filters,
+        filters={"cre_destino_cnes": f"eq.{cnes}"},
         order="data_solicitacao.desc",
         limit=5000,
     )
@@ -1394,22 +1406,21 @@ async def cre_patients(identity: Identity = Depends(current_identity)) -> list[d
 @app.get("/api/cre/lots")
 async def cre_lots(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    return await db_select("producao", "vw_lotes_recentes", order="data_cadastro.desc", limit=50)
+    cnes = str(identity.cnes_vinculo).strip()
+    return await db_select(
+        "producao", "vw_lotes_recentes",
+        filters={"cre_cnes": f"eq.{cnes}"}, order="data_cadastro.desc", limit=50,
+    )
 
 
 @app.get("/api/cre/triages")
 async def cre_triages(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    filters: dict[str, Any] | None = None
-    if identity.papel == "FISCAL_CRE":
-        if not identity.cnes_vinculo:
-            raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
-        filters = {"cre_destino_cnes": f"eq.{str(identity.cnes_vinculo).strip()}"}
-
+    cnes = str(identity.cnes_vinculo).strip()
     return await db_select(
         "fila",
         "vw_triagens",
-        filters=filters,
+        filters={"cre_destino_cnes": f"eq.{cnes}"},
         order="data_hora.desc",
         limit=200,
     )
@@ -1418,13 +1429,21 @@ async def cre_triages(identity: Identity = Depends(current_identity)) -> list[di
 @app.get("/api/cre/shipments")
 async def cre_shipments(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    return await db_select("producao", "vw_remessas_logistica", order="data_criacao.desc", limit=200)
+    cnes = str(identity.cnes_vinculo).strip()
+    return await db_select(
+        "producao", "vw_remessas_logistica",
+        filters={"cre_cnes": f"eq.{cnes}"}, order="data_criacao.desc", limit=200,
+    )
 
 
 @app.get("/api/cre/reports")
 async def cre_reports(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     await cre_identity(identity)
-    return await db_select("fila", "vw_relatorio_mensal", order="mes.asc")
+    cnes = str(identity.cnes_vinculo).strip()
+    return await db_select(
+        "fila", "vw_relatorio_mensal",
+        filters={"cre_destino_cnes": f"eq.{cnes}"}, order="mes.asc",
+    )
 
 
 
@@ -1470,15 +1489,32 @@ async def _notify_new_matching(match: dict[str, Any]) -> None:
     )
 
 
-async def _run_matching_and_notify() -> list[dict[str, Any]]:
+def _sanitize_matching_for_source(match: dict[str, Any]) -> dict[str, Any]:
+    safe = dict(match)
+    safe.pop("paciente_id", None)
+    safe.pop("paciente_primeiro_nome", None)
+    safe.pop("solicitacao_id", None)
+    return safe
+
+
+async def _run_matching_and_notify(visible_cnes: str | None = None) -> list[dict[str, Any]]:
     created = await db_rpc("producao", "fn_gerar_matchings")
     ids = [int(row.get("matching_id")) for row in created if row.get("matching_id") is not None]
     result: list[dict[str, Any]] = []
     for matching_id in ids:
         rows = await db_select("producao", "vw_matchings_cre", filters={"matching_id": f"eq.{matching_id}"}, limit=1)
-        if rows:
-            result.append(rows[0])
-            await _notify_new_matching(rows[0])
+        if not rows:
+            continue
+        match = rows[0]
+        await _notify_new_matching(match)
+        if visible_cnes is None:
+            result.append(match)
+            continue
+        source_cnes = str(match.get("cre_origem_cnes") or "").strip()
+        destination_cnes = str(match.get("cre_destino_cnes") or "").strip()
+        if visible_cnes not in {source_cnes, destination_cnes}:
+            continue
+        result.append(_sanitize_matching_for_source(match) if visible_cnes == source_cnes else match)
     return result
 
 
@@ -1518,8 +1554,6 @@ class CreInventoryDeviceCreate(BaseModel):
 @app.get("/api/cre/matching")
 async def cre_matching(identity: Identity = Depends(current_identity)) -> dict[str, Any]:
     await cre_identity(identity)
-    if identity.papel != "FISCAL_CRE" or not identity.cnes_vinculo:
-        raise HTTPException(status_code=403, detail="A área de matching é operacional do CRE.")
     cnes = str(identity.cnes_vinculo).strip()
     offices = await db_select("producao", "oficina_ortopedica", select="id,cnes,nome", filters={"cnes": f"eq.{cnes}", "ativo": "eq.true"}, limit=1)
     if not offices:
@@ -1527,6 +1561,7 @@ async def cre_matching(identity: Identity = Depends(current_identity)) -> dict[s
     office_id = int(offices[0]["id"])
     inventory = await db_select("producao", "vw_estoque_dispositivos_cre", filters={"oficina_id": f"eq.{office_id}"}, order="cadastrado_em.desc", limit=500)
     source_matches = await db_select("producao", "vw_matchings_cre", filters={"cre_origem_cnes": f"eq.{cnes}"}, order="criado_em.desc", limit=500)
+    source_matches = [_sanitize_matching_for_source(row) for row in source_matches]
     destination_matches = await db_select("producao", "vw_matchings_cre", filters={"cre_destino_cnes": f"eq.{cnes}"}, order="criado_em.desc", limit=500)
     products = await db_select("producao", "produto_ortese", select="id,procedimento_sigtap,nome_produto,especificacao_tecnica,ativo", filters={"ativo": "eq.true"}, order="nome_produto.asc", limit=1000)
     procedures = await db_select("dominio", "sigtap_procedimento", select="codigo,nome_procedimento", filters={"ativo": "eq.true"}, order="nome_procedimento.asc", limit=1000)
@@ -1592,7 +1627,7 @@ async def create_cre_inventory_device(payload: CreInventoryDeviceCreate, identit
         "observacao": payload.observacao,
     }))[0]
     eligible_for_patient = reuse_route == "CLINICO" and not clinically_unsafe and reusable
-    created_matches = await _run_matching_and_notify() if eligible_for_patient else []
+    created_matches = await _run_matching_and_notify(cnes) if eligible_for_patient else []
     return {"device": device, "product": product, "new_matches": created_matches}
 
 
@@ -1623,7 +1658,8 @@ async def update_inventory_reuse_route(device_id: int, payload: InventoryReuseRo
         raise HTTPException(status_code=422, detail="Dispositivos danificados ou vencidos só podem seguir para fundição, peças/componentes ou descarte.")
     reusable = payload.destino_reaproveitamento != "DESCARTE"
     updated = await db_update(
-        "producao", "estoque_dispositivo", {"id": f"eq.{device_id}"},
+        "producao", "estoque_dispositivo",
+        {"id": f"eq.{device_id}", "oficina_id": f"eq.{offices[0]['id']}"},
         {
             "destino_reaproveitamento": payload.destino_reaproveitamento,
             "apto_reuso": reusable,
@@ -1631,7 +1667,7 @@ async def update_inventory_reuse_route(device_id: int, payload: InventoryReuseRo
             "atualizado_em": datetime.now().isoformat(),
         },
     )
-    created = await _run_matching_and_notify() if payload.destino_reaproveitamento == "CLINICO" and not unsafe else []
+    created = await _run_matching_and_notify(cnes) if payload.destino_reaproveitamento == "CLINICO" and not unsafe else []
     return {"device": updated[0] if updated else device, "new_matches": created}
 
 
@@ -1649,30 +1685,51 @@ class MatchingDecision(BaseModel):
 async def decide_matching(matching_id: int, payload: MatchingDecision, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
     require_roles(identity, "FISCAL_CRE")
     cnes = str(identity.cnes_vinculo or "").strip()
-    rows = await db_select("producao", "vw_matchings_cre", filters={"matching_id": f"eq.{matching_id}"}, limit=1)
+    if not cnes:
+        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+
+    rows = await db_select(
+        "producao", "vw_matchings_cre",
+        filters={"matching_id": f"eq.{matching_id}", "cre_origem_cnes": f"eq.{cnes}"},
+        limit=1,
+    )
     if not rows:
-        raise HTTPException(status_code=404, detail="Matching não encontrado.")
+        raise HTTPException(status_code=404, detail="Matching não encontrado para este CRE.")
     match = rows[0]
-    if str(match.get("cre_origem_cnes") or "").strip() != cnes:
-        raise HTTPException(status_code=403, detail="Somente o CRE que possui o dispositivo pode responder a este matching.")
     if match.get("status") != "PROPOSTO":
         raise HTTPException(status_code=409, detail="Este matching já foi respondido.")
-    if payload.action == "REJECT":
-        if not (payload.motivo or "").strip():
-            raise HTTPException(status_code=422, detail="Informe o motivo da recusa.")
-        changed = await db_update("producao", "matching_dispositivo", {"id": f"eq.{matching_id}", "status": "eq.PROPOSTO"}, {"status": "RECUSADO", "motivo_recusa": payload.motivo, "respondido_em": datetime.now().isoformat(), "atualizado_em": datetime.now().isoformat()})
-        if not changed:
-            raise HTTPException(status_code=409, detail="Este matching acabou de ser respondido em outra sessão.")
-        await db_update("producao", "estoque_dispositivo", {"id": f"eq.{match['estoque_dispositivo_id']}", "status": "eq.RESERVADO"}, {"status": "DISPONIVEL", "atualizado_em": datetime.now().isoformat()})
+    if payload.action == "REJECT" and not (payload.motivo or "").strip():
+        raise HTTPException(status_code=422, detail="Informe o motivo da recusa.")
+
+    result = await db_rpc("producao", "fn_responder_matching", {
+        "p_matching_id": matching_id,
+        "p_cre_origem_cnes": cnes,
+        "p_acao": payload.action,
+        "p_motivo": payload.motivo,
+    })
+    if not result:
+        raise HTTPException(status_code=502, detail="O matching não retornou resultado após a atualização.")
+    response = result[0]
+
+    if response.get("status") == "RECUSADO":
         await _run_matching_and_notify()
-        return {"matching_id": matching_id, "status": "RECUSADO"}
-    changed = await db_update("producao", "matching_dispositivo", {"id": f"eq.{matching_id}", "status": "eq.PROPOSTO"}, {"status": "ACEITO", "respondido_em": datetime.now().isoformat(), "atualizado_em": datetime.now().isoformat()})
-    if not changed:
-        raise HTTPException(status_code=409, detail="Este matching acabou de ser respondido em outra sessão.")
-    destination_users = await db_select("app", "usuario_sistema", select="auth_user_id", filters={"papel": "eq.FISCAL_CRE", "cnes_vinculo": f"eq.{str(match.get('cre_destino_cnes') or '').strip()}", "ativo": "eq.true"}, limit=50)
+        return response
+
+    destination_users = await db_select(
+        "app", "usuario_sistema", select="auth_user_id",
+        filters={
+            "papel": "eq.FISCAL_CRE",
+            "cnes_vinculo": f"eq.{str(match.get('cre_destino_cnes') or '').strip()}",
+            "ativo": "eq.true",
+        },
+        limit=50,
+    )
     message = f"O CRE {match.get('cre_origem_nome') or match.get('cre_origem_cnes')} aceitou enviar {match.get('nome_produto')} para {match.get('cre_destino_nome') or match.get('cre_destino_cnes')}."
-    await _notify_auth_users(destination_users, tipo="INFO", titulo="Matching aceito pelo CRE de origem", mensagem=message, referencia_id=matching_id, destino_ui="cre_matching")
-    return {"matching_id": matching_id, "status": "ACEITO"}
+    await _notify_auth_users(
+        destination_users, tipo="INFO", titulo="Matching aceito pelo CRE de origem",
+        mensagem=message, referencia_id=matching_id, destino_ui="cre_matching",
+    )
+    return response
 
 
 # -----------------------------------------------------------------------------
@@ -1682,6 +1739,28 @@ async def decide_matching(matching_id: int, payload: MatchingDecision, identity:
 @app.get("/api/admin/catalogs")
 async def catalogs(identity: Identity = Depends(current_identity)) -> dict[str, Any]:
     require_roles(identity, "FISCAL_CRE", "GESTOR")
+    if identity.papel == "FISCAL_CRE":
+        if not identity.cnes_vinculo:
+            raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+        procedures = await db_select(
+            "dominio", "sigtap_procedimento",
+            select="codigo,nome_procedimento",
+            filters={"ativo": "eq.true"}, order="nome_procedimento.asc", limit=500,
+        )
+        return {
+            "patients": [],
+            "professionals": [],
+            "units": [],
+            "municipalities": [],
+            "procedures": procedures,
+            "diagnoses": [],
+            "workshops": [],
+            "materials": [],
+            "providers": [],
+            "products": [],
+            "pending_requests": [],
+            "cres": [],
+        }
     patients, professionals, units, municipalities, procedures, diagnoses, workshops, materials, providers, products = await _gather_catalogs()
 
     pending_requests = await db_select(
@@ -2320,44 +2399,18 @@ async def authorize_sisreg(payload: SisregAuthorize, identity: Identity = Depend
         raise HTTPException(status_code=422, detail="O produto selecionado não corresponde ao procedimento da solicitação.")
 
     authorization = payload.numero_autorizacao or f"SISREG-DEMO-{payload.solicitacao_id}-{datetime.now().strftime('%Y%m%d')}"
-    authorization_body: dict[str, Any] = {
-        "status": "AUTORIZADA",
-        "cre_destino_cnes": payload.cre_destino_cnes,
-        "produto_id": selected_product_id,
-        "sisreg_numero_autorizacao": authorization,
-        "sisreg_autorizado_em": datetime.now().isoformat(),
-        "data_ultima_atualizacao": datetime.now().isoformat(),
-    }
-    if payload.distancia_estimada_cre_km is not None:
-        authorization_body["distancia_estimada_cre_km"] = payload.distancia_estimada_cre_km
-    await db_update("fila", "solicitacao_ortese", {"id": f"eq.{payload.solicitacao_id}"}, authorization_body)
-    updated = (await db_update(
-        "fila",
-        "solicitacao_ortese",
-        {"id": f"eq.{payload.solicitacao_id}"},
-        {"status": "EM_FILA", "data_ultima_atualizacao": datetime.now().isoformat()},
-    ))[0]
-    await db_insert("fila", "historico_status_solicitacao", [
-        {
-            "solicitacao_id": payload.solicitacao_id,
-            "status_anterior": "AGUARDANDO_AUTORIZACAO",
-            "status_novo": "AUTORIZADA",
-            "usuario_responsavel": "SISREG (simulação)",
-            "observacao": payload.observacao or f"Autorização {authorization}; CRE definido: {payload.cre_destino_cnes}.",
-        },
-        {
-            "solicitacao_id": payload.solicitacao_id,
-            "status_anterior": "AUTORIZADA",
-            "status_novo": "EM_FILA",
-            "usuario_responsavel": "UMDR",
-            "observacao": "Paciente inserido na fila do CRE após autorização SISREG.",
-        },
-    ])
-    existing_queue = await db_select("fila", "fila_espera", select="id", filters={"solicitacao_id": f"eq.{payload.solicitacao_id}"}, limit=1)
-    if existing_queue:
-        await db_update("fila", "fila_espera", {"id": f"eq.{existing_queue[0]['id']}"}, {"data_saida_fila": None, "motivo_saida": None, "clock_pausado": False})
-    else:
-        await db_insert("fila", "fila_espera", {"solicitacao_id": payload.solicitacao_id, "posicao_prioridade": 1})
+    rpc_rows = await db_rpc("fila", "fn_autorizar_sisreg", {
+        "p_solicitacao_id": payload.solicitacao_id,
+        "p_cre_destino_cnes": payload.cre_destino_cnes,
+        "p_produto_id": selected_product_id,
+        "p_numero_autorizacao": authorization,
+        "p_distancia_estimada_cre_km": payload.distancia_estimada_cre_km,
+        "p_observacao": payload.observacao,
+        "p_usuario_responsavel": "SISREG (simulação)",
+    })
+    if not rpc_rows:
+        raise HTTPException(status_code=502, detail="O SISREG não retornou a solicitação autorizada.")
+    updated = rpc_rows[0]
 
     profiles = await db_select("app", "usuario_sistema", select="auth_user_id", filters={"paciente_id": f"eq.{request_row['paciente_id']}", "papel": "eq.PACIENTE", "ativo": "eq.true"}, limit=1)
     if profiles:
@@ -2470,21 +2523,15 @@ class TriageCreate(BaseModel):
 
 @app.post("/api/cre/triages", status_code=201)
 async def create_triage(payload: TriageCreate, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
+    require_roles(identity, "FISCAL_CRE")
     if not identity.profissional_saude_id:
         raise HTTPException(status_code=422, detail="O usuário não está vinculado a um profissional de saúde.")
-    await ensure_record_exists(
-        "fila",
-        "paciente",
-        "id",
-        payload.paciente_id,
-        "O paciente informado não existe.",
-    )
-    if identity.papel == "FISCAL_CRE" and not identity.cnes_vinculo:
+    if not identity.cnes_vinculo:
         raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
-    request_filters: dict[str, Any] = {"paciente_id": f"eq.{payload.paciente_id}"}
-    if identity.papel == "FISCAL_CRE":
-        request_filters["cre_destino_cnes"] = f"eq.{str(identity.cnes_vinculo).strip()}"
+    request_filters: dict[str, Any] = {
+        "paciente_id": f"eq.{payload.paciente_id}",
+        "cre_destino_cnes": f"eq.{str(identity.cnes_vinculo).strip()}",
+    }
     active_requests = await db_select(
         "fila",
         "solicitacao_ortese",
@@ -2496,18 +2543,21 @@ async def create_triage(payload: TriageCreate, identity: Identity = Depends(curr
     current_request = next((row for row in active_requests if row.get("status") in {"AUTORIZADA", "EM_FILA"}), None)
     if not current_request:
         raise HTTPException(
-            status_code=409,
-            detail="Este paciente não possui solicitação autorizada pelo SISREG e vinculada a este CRE para iniciar a triagem.",
+            status_code=404,
+            detail="Paciente ou solicitação autorizada não encontrada para este CRE.",
         )
     existing_triages = await db_select(
         "fila", "triagem_clinica",
         select="id,status",
-        filters={"solicitacao_id": f"eq.{current_request['id']}"},
+        filters={
+            "solicitacao_id": f"eq.{current_request['id']}",
+            "status": "in.(PENDENTE,EM_ANDAMENTO)",
+        },
         order="data_hora.desc",
-        limit=20,
+        limit=1,
     )
     if existing_triages:
-        raise HTTPException(status_code=409, detail="Esta solicitação já possui uma triagem registrada. Abra a triagem existente para continuar o atendimento.")
+        raise HTTPException(status_code=409, detail="Esta solicitação já possui uma triagem ativa.")
     procedure = payload.procedimento_sigtap_proposto or current_request.get("procedimento_sigtap")
     if procedure:
         await ensure_record_exists(
@@ -2637,7 +2687,7 @@ def _triage_workflow_status(triage_status: str, request_status: str, production_
         return "CANCELADA"
     if request_status == "ENTREGUE" or production_status == "ENTREGUE":
         return "ENTREGUE"
-    if production_status == "PRONTA_PARA_ENTREGA":
+    if request_status == "PRONTA_PARA_ENTREGA" or production_status == "PRONTA_PARA_ENTREGA":
         return "PRONTA_PARA_ENTREGA"
     if request_status == "EM_PRODUCAO" or production_status in {"AGUARDANDO_MEDIDAS", "EM_PRODUCAO", "CONTROLE_QUALIDADE"}:
         return "EM_PRODUCAO"
@@ -2720,6 +2770,7 @@ async def _production_order_for_request(
         "produto_id": products[0]["id"],
         "tecnico_responsavel_id": professional_id,
         "status": "AGUARDANDO_MEDIDAS",
+        "origem_atendimento": "REAPROVEITAMENTO" if active_match and active_match.get("status") in {"ACEITO", "EM_TRANSITO"} else "FABRICACAO",
         "observacoes_tecnicas": (
             f"Atendimento por reaproveitamento nacional. Matching #{active_match['matching_id']} — "
             f"peça {active_match.get('numero_serie') or 'sem série informada'} transferida do CRE "
@@ -2757,17 +2808,20 @@ async def _notify_patient_workflow(patient_id: int, title: str, message: str, re
 
 @app.patch("/api/cre/triages/{triage_id}")
 async def update_triage(triage_id: int, payload: TriagePatch, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
+    require_roles(identity, "FISCAL_CRE")
+    if not identity.cnes_vinculo:
+        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+    cnes = str(identity.cnes_vinculo).strip()
 
     triage_rows = await db_select(
         "fila",
-        "triagem_clinica",
-        select="id,paciente_id,solicitacao_id,status,observacao_clinica,procedimento_sigtap_proposto",
-        filters={"id": f"eq.{triage_id}"},
+        "vw_triagens",
+        select="triagem_id,paciente_id,solicitacao_id,cre_destino_cnes,status,observacao_clinica,procedimento_sigtap_proposto",
+        filters={"triagem_id": f"eq.{triage_id}", "cre_destino_cnes": f"eq.{cnes}"},
         limit=1,
     )
     if not triage_rows:
-        raise HTTPException(status_code=404, detail="Triagem não encontrada.")
+        raise HTTPException(status_code=404, detail="Triagem não encontrada para este CRE.")
     triage = triage_rows[0]
     request_id = triage.get("solicitacao_id")
     if not request_id:
@@ -2777,15 +2831,13 @@ async def update_triage(triage_id: int, payload: TriagePatch, identity: Identity
         "fila",
         "solicitacao_ortese",
         select="id,paciente_id,procedimento_sigtap,produto_id,status,cre_destino_cnes",
-        filters={"id": f"eq.{request_id}"},
+        filters={"id": f"eq.{request_id}", "cre_destino_cnes": f"eq.{cnes}"},
         limit=1,
     )
     if not request_rows:
-        raise HTTPException(status_code=404, detail="Solicitação vinculada à triagem não encontrada.")
+        raise HTTPException(status_code=404, detail="Solicitação vinculada à triagem não encontrada para este CRE.")
     request_row = request_rows[0]
-    request_cnes = str(request_row.get("cre_destino_cnes") or "").strip()
-    if identity.papel == "FISCAL_CRE" and request_cnes != str(identity.cnes_vinculo or "").strip():
-        raise HTTPException(status_code=403, detail="Esta triagem pertence a outro CRE.")
+    request_cnes = cnes
 
     if payload.procedimento_sigtap_proposto:
         await ensure_record_exists(
@@ -2827,8 +2879,9 @@ async def update_triage(triage_id: int, payload: TriagePatch, identity: Identity
             raise HTTPException(status_code=422, detail="Informe uma justificativa clara para cancelar o atendimento.")
         triage_changes["status"] = "CANCELADA"
         previous_request_status = str(request_row.get("status") or "EM_FILA")
-        await db_update("fila", "solicitacao_ortese", {"id": f"eq.{request_id}"}, {
+        await db_update("fila", "solicitacao_ortese", {"id": f"eq.{request_id}", "cre_destino_cnes": f"eq.{cnes}"}, {
             "status": "CANCELADA",
+            "motivo_cancelamento": reason,
             "data_ultima_atualizacao": datetime.now().isoformat(),
         })
         if existing_order:
@@ -2899,6 +2952,10 @@ async def update_triage(triage_id: int, payload: TriagePatch, identity: Identity
                 "status": "PRONTA_PARA_ENTREGA",
                 "data_conclusao": datetime.now().isoformat(),
             })
+            await db_update("fila", "solicitacao_ortese", {"id": f"eq.{request_id}", "cre_destino_cnes": f"eq.{cnes}"}, {
+                "status": "PRONTA_PARA_ENTREGA",
+                "data_ultima_atualizacao": datetime.now().isoformat(),
+            })
             if active_matching and active_matching.get("status") in {"ACEITO", "EM_TRANSITO"}:
                 await db_update("producao", "matching_dispositivo", {"id": f"eq.{active_matching['matching_id']}"}, {
                     "status": "CONCLUIDO", "atualizado_em": datetime.now().isoformat(),
@@ -2934,7 +2991,7 @@ async def update_triage(triage_id: int, payload: TriagePatch, identity: Identity
                 })
             await db_insert("fila", "historico_status_solicitacao", {
                 "solicitacao_id": request_id,
-                "status_anterior": "EM_PRODUCAO",
+                "status_anterior": "PRONTA_PARA_ENTREGA",
                 "status_novo": "ENTREGUE",
                 "usuario_responsavel": identity.auth_user_id,
                 "observacao": "Dispositivo entregue ao paciente.",
@@ -2949,7 +3006,11 @@ async def update_triage(triage_id: int, payload: TriagePatch, identity: Identity
         patient_notification = (title, message, False)
 
     if triage_changes:
-        rows = await db_update("fila", "triagem_clinica", {"id": f"eq.{triage_id}"}, triage_changes)
+        rows = await db_update(
+            "fila", "triagem_clinica",
+            {"id": f"eq.{triage_id}", "solicitacao_id": f"eq.{request_id}"},
+            triage_changes,
+        )
         if not rows:
             raise HTTPException(status_code=404, detail="Triagem não encontrada.")
     else:
@@ -3005,10 +3066,10 @@ class ShipmentCreate(BaseModel):
 
 @app.post("/api/cre/shipments", status_code=201)
 async def create_shipment(payload: ShipmentCreate, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
-    require_roles(identity, "FISCAL_CRE", "GESTOR")
-    workshop_filters = {"ativo": "eq.true"}
-    if identity.cnes_vinculo:
-        workshop_filters["cnes"] = f"eq.{identity.cnes_vinculo}"
+    require_roles(identity, "FISCAL_CRE")
+    if not identity.cnes_vinculo:
+        raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+    workshop_filters = {"ativo": "eq.true", "cnes": f"eq.{identity.cnes_vinculo}"}
     workshops = await db_select("producao", "oficina_ortopedica", select="id,cnes,nome", filters=workshop_filters, limit=1)
     if not workshops:
         raise HTTPException(status_code=422, detail="O usuário não está vinculado a uma oficina ortopédica ativa.")
@@ -3118,7 +3179,7 @@ async def _alert_recipients(payload: AlertCreate, identity: Identity) -> list[di
         if not identity.cnes_vinculo:
             raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
         if payload.audiencia == "UNIT_STAFF":
-            return [user for user in users if user.get("cnes_vinculo") == identity.cnes_vinculo and user.get("papel") in {"FISCAL_CRE", "GESTOR"}]
+            return [user for user in users if user.get("cnes_vinculo") == identity.cnes_vinculo and user.get("papel") == "FISCAL_CRE"]
         linked_patients = await db_select(
             "fila",
             "vw_pacientes_cre",
@@ -3160,19 +3221,47 @@ async def create_alert(payload: AlertCreate, identity: Identity = Depends(curren
 @app.get("/api/communications/recalls")
 async def communications_recalls(identity: Identity = Depends(current_identity)) -> list[dict[str, Any]]:
     require_roles(identity, "FISCAL_CRE", "GESTOR")
+    if identity.papel == "FISCAL_CRE":
+        return await cre_recalls(identity)
     return await db_select("app", "recall", order="data_abertura.desc", limit=100)
 
 
 @app.post("/api/communications/recalls", status_code=201)
 async def create_recall(payload: RecallCreate, identity: Identity = Depends(current_identity)) -> dict[str, Any]:
     require_roles(identity, "FISCAL_CRE", "GESTOR")
-    issuer = payload.orgao_notificador or (identity.cnes_vinculo if identity.papel == "FISCAL_CRE" else "UMDR")
+    affected_devices = payload.affected_devices
+    issuer = payload.orgao_notificador or "UMDR"
+
+    if identity.papel == "FISCAL_CRE":
+        if not identity.cnes_vinculo:
+            raise HTTPException(status_code=422, detail="O usuário CRE não possui CNES vinculado.")
+        cnes = str(identity.cnes_vinculo).strip()
+        local_lots, _ = await _cre_local_lots(cnes)
+        if payload.codigo_lote.strip() not in local_lots:
+            raise HTTPException(status_code=404, detail="Lote não encontrado no estoque deste CRE.")
+
+        offices = await db_select(
+            "producao", "oficina_ortopedica", select="id",
+            filters={"cnes": f"eq.{cnes}", "ativo": "eq.true"}, limit=20,
+        )
+        office_ids = [int(row["id"]) for row in offices if row.get("id") is not None]
+        physical = await db_select(
+            "producao", "estoque_dispositivo", select="id",
+            filters={
+                "oficina_id": f"in.({','.join(map(str, office_ids))})",
+                "lote_fabricante": f"eq.{payload.codigo_lote.strip()}",
+            },
+            limit=5000,
+        ) if office_ids else []
+        affected_devices = len(physical)
+        issuer = cnes
+
     rows = await db_insert("app", "recall", {
         "codigo_lote": payload.codigo_lote,
         "nome_produto": payload.nome_produto,
         "motivo": payload.motivo,
         "data_limite": payload.data_limite.isoformat() if payload.data_limite else None,
-        "affected_devices": payload.affected_devices,
+        "affected_devices": affected_devices,
         "status": payload.status,
         "orgao_notificador": issuer,
     })
@@ -3362,7 +3451,7 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
         "delivered_requests": len(deliveries),
         "damaged_expired_devices": len(damaged_expired_devices),
         "reuse_matches": len(completed_matches),
-        "pending_matches": 0,
+        "pending_matches": sum(1 for item in matches if item.get("status") in {"PROPOSTO", "ACEITO", "EM_TRANSITO"}),
         "active_queue": active_queue_count,
         "sisreg_pending": sisreg_pending_count,
     }
@@ -3404,11 +3493,11 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
         regional_map[unit_to_region.get(unit.get("codigo_cnes"), "—")]["units"] += 1
     for item in queue:
         request_item = request_by_id.get(item.get("solicitacao_id"), {})
-        region = unit_to_region.get(request_item.get("estabelecimento_solicitante_cnes")) or patient_to_region.get(request_item.get("paciente_id")) or "—"
+        region = unit_to_region.get(request_item.get("cre_destino_cnes")) or patient_to_region.get(request_item.get("paciente_id")) or "—"
         if not item.get("data_saida_fila"):
             regional_map[region]["queue"] += 1
     for item in device_inventory:
-        if item.get("status") in {"DISPONIVEL", "RESERVADO", "EM_TRANSFERENCIA"}:
+        if item.get("status") in {"DISPONIVEL", "RESERVADO", "EM_TRANSFERENCIA", "BLOQUEADO"}:
             region = workshop_to_region.get(item.get("oficina_id"), "—")
             regional_map[region]["stock"] += 1
     for item in shipments:
@@ -3467,7 +3556,7 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
     for item in queue:
         request_item = request_by_id.get(item.get("solicitacao_id"), {})
         patient_id = request_item.get("paciente_id")
-        region = unit_to_region.get(request_item.get("estabelecimento_solicitante_cnes")) or patient_to_region.get(patient_id) or "—"
+        region = unit_to_region.get(request_item.get("cre_destino_cnes")) or patient_to_region.get(patient_id) or "—"
         start_raw = item.get("data_entrada_fila")
         end_raw = item.get("data_saida_fila")
         if not start_raw:
@@ -3677,6 +3766,21 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
         finance_months[key][category] += amount
 
 
+    manager_matches = [
+        {
+            "matching_id": item.get("matching_id"),
+            "status": item.get("status"),
+            "distancia_km": item.get("distancia_km"),
+            "criado_em": item.get("criado_em"),
+            "cre_origem_cnes": item.get("cre_origem_cnes"),
+            "cre_origem_nome": item.get("cre_origem_nome"),
+            "cre_destino_cnes": item.get("cre_destino_cnes"),
+            "cre_destino_nome": item.get("cre_destino_nome"),
+            "nome_produto": item.get("nome_produto"),
+        }
+        for item in matches
+    ]
+
     return {
         "summary": summary,
         "monthly": monthly,
@@ -3696,6 +3800,6 @@ async def manager_dashboard(identity: Identity = Depends(current_identity)) -> d
         "recalls": recalls,
         "reports": reports,
         "access_matrix": ACCESS_MATRIX,
-        "matches": matches,
+        "matches": manager_matches,
         "generated_at": datetime.now().isoformat(),
     }
