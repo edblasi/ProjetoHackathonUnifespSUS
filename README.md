@@ -1,176 +1,64 @@
-# UMDR — Unified Medical Device Registry
+# REVITA
 
-Projeto integrado com quatro páginas funcionais:
+O **REVITA** é uma plataforma de rastreabilidade e gestão de órteses, próteses e outros dispositivos assistivos no SUS.
 
-- login e verificação do paciente;
-- portal do paciente;
-- painel CRE;
-- painel nacional do gestor.
+A proposta é acompanhar não apenas o paciente, mas também o **dispositivo durante todo o seu ciclo de vida**: solicitação, autorização, triagem, produção, estoque, entrega, manutenção, recall, reaproveitamento e logística reversa.
 
-O frontend preserva a estrutura React/Vite e o mecanismo de i18n já existente em `frontend/src/i18n`, com traduções em português (`pt-BR`), inglês (`en-US`) e espanhol (`es-419`). O Supabase no navegador é usado somente para autenticação. As consultas e os cadastros passam pelo backend FastAPI.
+A plataforma possui três perfis principais:
 
-## Estrutura
+* **Manager:** acompanha indicadores gerais da rede, finanças, logística, ciclo de vida, relatórios, alertas e situação dos CREs.
+* **CRE:** gerencia pacientes da unidade, triagens, dispositivos, estoque, matching, atendimento e logística reversa.
+* **Paciente:** acompanha a própria solicitação, recebe notificações, acessa a carteirinha digital e pode entrar em contato com o CRE responsável.
+
+## Matching nacional
+
+Um dos principais recursos do REVITA é o **matching de dispositivos**. Se um CRE possui uma prótese ou órtese compatível parada em estoque e outro CRE possui um paciente que precisa daquele mesmo produto, o sistema pode identificar a oportunidade de reaproveitamento.
+
+A peça é reservada, o CRE de origem decide sobre o envio e, quando aceita, o dispositivo segue para transferência. Isso reduz desperdícios e evita novas produções quando já existe um item adequado disponível na rede.
+
+Dispositivos danificados ou vencidos não são reutilizados clinicamente, mas podem seguir para **fundição, recuperação de materiais, aproveitamento de componentes ou descarte adequado**.
+
+## Principais recursos
+
+* acompanhamento completo da jornada do paciente;
+* rastreabilidade individual de dispositivos;
+* gestão de CREs, UBSs, profissionais e solicitações;
+* integração do fluxo SISREG;
+* estoque físico e produção;
+* matching e transferência entre CREs;
+* logística reversa e reaproveitamento;
+* recalls e alertas;
+* relatórios gerenciais e financeiros;
+* carteirinha digital do paciente;
+* suporte a Português, Inglês e Espanhol;
+* layout responsivo;
+* suporte a leitores de tela e navegação por teclado.
+
+## Estrutura do projeto
 
 ```text
 SiteSUS/
 ├── backend/
 │   ├── main.py
-│   ├── bootstrap_admin.py
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
+│   └── validation.py
+│
 ├── frontend/
-│   ├── src/
-│   ├── package.json
-│   ├── Dockerfile
-│   └── .env.example
-├── supabase/
-│   └── schema.sql
-└── docker-compose.yml
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       ├── hooks/
+│       ├── i18n/
+│       │   └── locales/
+│       │       ├── pt-BR.json
+│       │       ├── en-US.json
+│       │       └── es-419.json
+│       ├── lib/
+│       ├── pages/
+│       ├── types/
+│       ├── App.tsx
+│       └── main.tsx
+│
+└── README.md
 ```
 
-## 1. Criar o banco
-
-Use um projeto Supabase vazio. No **SQL Editor**, execute todo o arquivo:
-
-```text
-supabase/schema.sql
-```
-
-O script cria os schemas, tabelas, funções, políticas, views, índices e dados demonstrativos necessários às telas.
-
-### Expor os schemas ao PostgREST
-
-No Supabase, abra **Project Settings → API → Exposed schemas** e mantenha `public`, adicionando:
-
-```text
-app, dominio, fila, producao, faturamento
-```
-
-Essa configuração é necessária porque o backend usa a API REST do próprio Supabase para consultar esses schemas.
-
-## 2. Configurar o backend
-
-Copie `backend/.env.example` para `backend/.env` e preencha:
-
-```env
-SUPABASE_URL=https://SEU-PROJETO.supabase.co
-SUPABASE_SERVICE_KEY=SUA_CHAVE_SERVICE_ROLE
-CORS_ORIGINS=http://localhost:5173,http://localhost:8080,https://seu-frontend.com
-```
-
-A chave `service_role` deve existir apenas no backend e nunca deve ser publicada no frontend.
-
-### Criar o primeiro gestor
-
-Depois de executar o SQL, instale as dependências e rode o bootstrap uma única vez:
-
-```bash
-cd backend
-python -m venv .venv
-# Linux/macOS
-source .venv/bin/activate
-# Windows PowerShell
-# .venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
-python bootstrap_admin.py --email gestor@exemplo.com --password "TroqueEstaSenha123!" --name "Gestor Nacional"
-```
-
-O script vincula o primeiro login ao profissional demonstrativo do banco. Depois disso, novos pacientes, profissionais, gestores, fiscais CRE, fornecedores e solicitações podem ser cadastrados pelo painel do gestor.
-
-### Executar localmente
-
-```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Teste de saúde:
-
-```text
-http://localhost:8000/health
-```
-
-## 3. Configurar o frontend
-
-Copie `frontend/.env.example` para `frontend/.env` e preencha:
-
-```env
-VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANON_PUBLICA
-VITE_API_URL=
-```
-
-Depois:
-
-```bash
-cd frontend
-npm ci
-npm run dev
-```
-
-Acesse `http://localhost:5173`. No modo de desenvolvimento, quando `VITE_API_URL` estiver vazio, o frontend usa `http://localhost:8000` automaticamente.
-
-## 4. Implantação
-
-### Docker Compose
-
-Com os dois arquivos `.env` preenchidos:
-
-```bash
-docker compose up --build -d
-```
-
-- aplicação completa: `http://localhost:8080`
-- backend direto, para diagnóstico: `http://localhost:8000`
-
-No Docker Compose, o Nginx encaminha `/api` internamente para o backend, então `VITE_API_URL` pode permanecer vazio. Para publicar frontend e backend em serviços separados, defina `VITE_API_URL` com a URL HTTPS pública do backend antes do build e ajuste `CORS_ORIGINS` com o domínio público do frontend.
-
-### Serviços separados
-
-O backend pode ser publicado a partir da pasta `backend` em serviços compatíveis com Docker ou Python. O comando de inicialização é:
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
-O frontend pode ser publicado a partir da pasta `frontend` em Vercel, Netlify, Cloudflare Pages, GitHub Pages ou qualquer hospedagem estática. Comando de build:
-
-```bash
-npm ci && npm run build
-```
-
-Diretório de saída: `frontend/dist`.
-
-## Rotas do frontend
-
-O projeto usa `HashRouter`, evitando configuração especial de redirecionamento na hospedagem:
-
-- `/#/login`
-- `/#/` — paciente
-- `/#/cre` — fiscal CRE ou gestor
-- `/#/manager` — gestor
-
-Após o login, o papel registrado em `app.usuario_sistema` define automaticamente a página correta.
-
-## Cadastros disponíveis
-
-No painel do gestor, em **Cadastros**, é possível criar:
-
-- paciente com login;
-- profissional/fiscal CRE/gestor com login;
-- fornecedor e contrato;
-- solicitação de órtese para paciente existente.
-
-O backend também disponibiliza endpoints simples para triagens e remessas de logística reversa.
-
-## QR Code
-
-O componente visual de QR Code continua propositalmente demonstrativo. Ele não gera, assina nem valida códigos reais, conforme o escopo do projeto.
-
-## Segurança essencial
-
-- Nunca coloque `SUPABASE_SERVICE_KEY` no frontend.
-- Troque as credenciais demonstrativas antes de publicar.
-- Restrinja `CORS_ORIGINS` aos domínios reais em produção.
-- Se este projeto for compartilhado publicamente, rotacione qualquer chave que tenha sido incluída em arquivos `.env`.
+O **frontend** concentra as interfaces de Manager, CRE e Paciente. O **backend** aplica as regras de negócio, autenticação, autorização e comunicação com o banco de dados.
