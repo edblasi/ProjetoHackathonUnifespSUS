@@ -1585,7 +1585,7 @@ function printTriageReceipt(triage: Triagem, locale: string, labels: { title: st
     h1{font-size:22px;margin:0 0 6px} .muted{color:#64748b;font-size:12px} .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
     .field{border:1px solid #e2e8f0;border-radius:10px;padding:12px}.label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em}.value{font-size:14px;font-weight:600;margin-top:5px}
     .notes{margin-top:12px}.footer{margin-top:36px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b}@media print{body{margin:22mm}.no-print{display:none}}
-  </style></head><body><div class="head"><h1>${escapePrintHtml(labels.title)}</h1><div class="muted">CRE · comprovante gerado pelo sistema</div></div>
+  </style></head><body><div class="head"><h1>${escapePrintHtml(labels.title)}</h1><div class="muted">CER · comprovante gerado pelo sistema</div></div>
   <div class="grid">
     <div class="field"><div class="label">${escapePrintHtml(labels.patient)}</div><div class="value">${escapePrintHtml(values.patient)}</div></div>
     <div class="field"><div class="label">${escapePrintHtml(labels.request)}</div><div class="value">${escapePrintHtml(values.request)}</div></div>

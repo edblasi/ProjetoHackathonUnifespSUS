@@ -212,24 +212,24 @@ function managerReportKindFromText(value: string): ManagerReportKind {
 
 function reportLabels(locale: string) {
   if (locale.startsWith("en")) return {
-    generated: "Generated at", summary: "Executive summary", patients: "Patients", units: "Active CRE units",
+    generated: "Generated at", summary: "Executive summary", patients: "Patients", units: "Active CER units",
     queue: "Active queue", sisreg: "Waiting SISREG approval", devices: "Active devices", recalls: "Active recalls",
     reused: "Completed reuse matchings", damaged: "Damaged or expired devices", conformity: "Conformity rate", efficiency: "Efficiency rate",
-    finance: "Monthly financial execution", network: "CRE network", logistics: "Logistics and SISREG", lifecycle: "Lifecycle and reuse",
+    finance: "Monthly financial execution", network: "CER network", logistics: "Logistics and SISREG", lifecycle: "Lifecycle and reuse",
     equity: "Equity and access", access: "Access matrix", noData: "No records available for this section.",
   };
   if (locale.startsWith("es")) return {
-    generated: "Generado el", summary: "Resumen ejecutivo", patients: "Pacientes", units: "Unidades CRE activas",
+    generated: "Generado el", summary: "Resumen ejecutivo", patients: "Pacientes", units: "Unidades CER activas",
     queue: "Cola activa", sisreg: "Esperando aprobación SISREG", devices: "Dispositivos activos", recalls: "Recalls activos",
     reused: "Reutilizaciones concluidas", damaged: "Dispositivos dañados o vencidos", conformity: "Tasa de conformidad", efficiency: "Tasa de eficiencia",
-    finance: "Ejecución financiera mensual", network: "Red de CRE", logistics: "Logística y SISREG", lifecycle: "Ciclo de vida y reutilización",
+    finance: "Ejecución financiera mensual", network: "Red de CER", logistics: "Logística y SISREG", lifecycle: "Ciclo de vida y reutilización",
     equity: "Equidad y acceso", access: "Matriz de acceso", noData: "No hay registros disponibles para esta sección.",
   };
   return {
-    generated: "Gerado em", summary: "Resumo executivo", patients: "Pacientes", units: "Unidades CRE ativas",
+    generated: "Gerado em", summary: "Resumo executivo", patients: "Pacientes", units: "Unidades CER ativas",
     queue: "Fila ativa", sisreg: "Aguardando aprovação SISREG", devices: "Dispositivos ativos", recalls: "Recalls ativos",
     reused: "Reaproveitamentos concluídos", damaged: "Dispositivos danificados ou vencidos", conformity: "Taxa de conformidade", efficiency: "Taxa de eficiência",
-    finance: "Execução financeira mensal", network: "Rede de CREs", logistics: "Logística e SISREG", lifecycle: "Ciclo de vida e reaproveitamento",
+    finance: "Execução financeira mensal", network: "Rede de CERs", logistics: "Logística e SISREG", lifecycle: "Ciclo de vida e reaproveitamento",
     equity: "Equidade e acesso", access: "Matriz de acesso", noData: "Não há registros disponíveis para esta seção.",
   };
 }
@@ -302,7 +302,7 @@ function buildManagerReportLines(data: ManagerDashboardData, kind: ManagerReport
   } else if (kind === "EQUITY") {
     add(l.equity, data.equity_points.length ? data.equity_points.map((row) => `${row.region} | ${row.zone} | distância ${row.distance_km} km | espera ${row.wait_days} dias`) : [l.noData]);
   } else {
-    add(l.access, (data.access_matrix ?? []).length ? (data.access_matrix ?? []).map((row) => `${row.key} | paciente ${row.PACIENTE} | CRE ${row.FISCAL_CRE} | gestor ${row.GESTOR}`) : [l.noData]);
+    add(l.access, (data.access_matrix ?? []).length ? (data.access_matrix ?? []).map((row) => `${row.key} | paciente ${row.PACIENTE} | CER ${row.FISCAL_CRE} | gestor ${row.GESTOR}`) : [l.noData]);
   }
   return lines;
 }

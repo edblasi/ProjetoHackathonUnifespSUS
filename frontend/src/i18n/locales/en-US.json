@@ -19,7 +19,7 @@
     },
     "pacientes": {
       "title": "Awaiting Patients",
-      "sub": "Care Management and Reverse Logistics — #CRE-SP-04"
+      "sub": "Care Management and Reverse Logistics — #CER-SP-04"
     },
     "logistica": {
       "title": "Reverse Logistics",
@@ -47,13 +47,13 @@
     }
   },
   "profile": {
-    "role": "CRE Administrator",
+    "role": "CER Administrator",
     "email": "Email",
     "phone": "Extension",
     "unit": "Unit",
     "profile": "Profile",
     "lastLogin": "Last login",
-    "unitValue": "CRE Santo André — SP",
+    "unitValue": "CER Santo André — SP",
     "roleValue": "Regional Administrator",
     "lastValue": "Today, 08:42",
     "settings": "Settings",
@@ -121,7 +121,7 @@
   },
   "patients": {
     "title": "Awaiting Patients",
-    "sub": "active referrals assigned to this CRE",
+    "sub": "active referrals assigned to this CER",
     "all": "All",
     "waiting": "Waiting",
     "inProgress": "In Progress",
@@ -144,13 +144,13 @@
     },
     "records": {
       "title": "All patient records",
-      "count": "records assigned to this CRE",
+      "count": "records assigned to this CER",
       "patient": "PATIENT",
       "request": "REQUEST",
       "priority": "PRIORITY",
       "wait": "QUEUE TIME",
       "days": "days",
-      "empty": "No records assigned to this CRE."
+      "empty": "No records assigned to this CER."
     }
   },
   "cre": {
@@ -196,12 +196,12 @@
       "pain": "Pain/discomfort",
       "support": "Support",
       "patient": "Patient",
-      "creTeam": "CRE team",
+      "creTeam": "CER team",
       "noPhone": "phone not provided",
       "severityLabel": "Reported severity",
       "quickGuidance": "Quick guidance",
       "noAction": "No immediate action",
-      "maintenance": "Go to CRE",
+      "maintenance": "Go to CER",
       "hospital": "Recommend urgent care",
       "custom": "Custom reply",
       "replyPlaceholder": "Write a response to the patient…",
@@ -236,13 +236,13 @@
       "guidance": {
         "NENHUMA": "Message",
         "SEM_ACAO": "No immediate action",
-        "COMPARECER_CRE": "Go to CRE",
+        "COMPARECER_CRE": "Go to CER",
         "PROCURAR_HOSPITAL": "Seek urgent care",
         "PERSONALIZADA": "Custom guidance"
       },
       "presets": {
         "noAction": "Based on the report sent, we did not identify a need for immediate action. Keep monitoring the device and contact us again if symptoms worsen or new symptoms appear.",
-        "maintenance": "We need to assess the device in person. Please go to the responsible CRE for review, adjustment or maintenance.",
+        "maintenance": "We need to assess the device in person. Please go to the responsible CER for review, adjustment or maintenance.",
         "hospital": "Based on the reported signs, we recommend seeking urgent/emergency care for an in-person assessment. Do not wait only for a portal reply."
       }
     }
@@ -515,15 +515,15 @@
       "stages": {
         "received": "Request received by the SUS network",
         "sisreg": "SISREG authorization",
-        "cre": "CRE assignment",
+        "cre": "CER assignment",
         "queue": "Triage queue",
         "triage": "Clinical triage",
         "productionShort": "Production",
         "deliveryShort": "Delivery"
       },
-      "readyForPickup": "Your device is ready and waiting to be picked up at the CRE.",
+      "readyForPickup": "Your device is ready and waiting to be picked up at the CER.",
       "cancelledTitle": "Care request cancelled",
-      "cancelledFallback": "The CRE cancelled this request. Check your notifications or contact your care team for more information."
+      "cancelledFallback": "The CER cancelled this request. Check your notifications or contact your care team for more information."
     },
     "id": {
       "title": "Prosthesis Digital Identity",
@@ -553,10 +553,10 @@
       },
       "privacyNote": "Your data is protected by the LGPD and the Ministry of Health security protocol.",
       "cre": {
-        "label": "Contact my CRE",
+        "label": "Contact my CER",
         "desc": "Send a message or call the unit responsible for your care"
       },
-      "awaitingCre": "Your CRE has not been assigned yet. Pain reporting and direct CRE contact will become available after SISREG authorization and referral to the responsible unit."
+      "awaitingCre": "Your CER has not been assigned yet. Pain reporting and direct CER contact will become available after SISREG authorization and referral to the responsible unit."
     },
     "notif": {
       "title": "Next maintenance in {days} days",
@@ -589,7 +589,7 @@
       "manufacturer": "Device manufacturer",
       "manufacturedAt": "Manufacture date",
       "serialNumber": "Serial number",
-      "assignedCre": "Assigned CRE"
+      "assignedCre": "Assigned CER"
     },
     "deviceCard": {
       "title": "Digital device card",
@@ -623,28 +623,28 @@
     },
     "supportModal": {
       "painTitle": "Report pain or discomfort",
-      "contactTitle": "Contact my CRE",
+      "contactTitle": "Contact my CER",
       "subtitle": "The request is routed to the unit responsible for your device or request.",
       "painSubject": "Pain or discomfort report",
-      "contactSubject": "Contact with CRE",
-      "relatedCre": "Responsible CRE",
+      "contactSubject": "Contact with CER",
+      "relatedCre": "Responsible CER",
       "safetyTitle": "Safety guidance",
       "safetyText": "This channel does not replace medical evaluation. For severe pain, bleeding, shortness of breath, major trauma, high fever, or rapid worsening, seek urgent or emergency care immediately.",
       "sendMessage": "Send a message",
-      "sendMessageDesc": "Explain what is happening and wait for the CRE team response.",
+      "sendMessageDesc": "Explain what is happening and wait for the CER team response.",
       "directContact": "Direct contact",
-      "directContactDesc": "Notify the CRE and see the unit phone number to call directly.",
+      "directContactDesc": "Notify the CER and see the unit phone number to call directly.",
       "severity": "Discomfort intensity",
       "severityLight": "Mild",
       "severityModerate": "Moderate",
       "severityIntense": "Severe",
       "messageLabel": "Message",
       "painPlaceholder": "Describe where it hurts, when it started, whether device use makes it worse, and any other relevant detail.",
-      "messagePlaceholder": "Write your question or request to the CRE team.",
+      "messagePlaceholder": "Write your question or request to the CER team.",
       "messageRequired": "Write a message with at least 3 characters.",
-      "send": "Send to CRE",
+      "send": "Send to CER",
       "genericError": "The support request could not be completed.",
-      "creNotified": "The responsible CRE was notified.",
+      "creNotified": "The responsible CER was notified.",
       "sent": "Message sent successfully.",
       "directInfo": "You can call the unit below. If symptoms are severe or there is immediate risk to your health, seek urgent/emergency care instead of waiting for a reply.",
       "phoneUnavailable": "No phone number registered for this unit",
@@ -652,8 +652,8 @@
       "myConversations": "My conversations",
       "newContact": "New contact",
       "you": "You",
-      "creTeam": "CRE team",
-      "replyPlaceholder": "Reply to the CRE team…",
+      "creTeam": "CER team",
+      "replyPlaceholder": "Reply to the CER team…",
       "ministryLink": "Open SUS Ombudsman / Ministry of Health",
       "status": {
         "ABERTO": "Open",
@@ -664,7 +664,7 @@
       "guidance": {
         "NENHUMA": "Message",
         "SEM_ACAO": "No immediate action",
-        "COMPARECER_CRE": "Go to CRE",
+        "COMPARECER_CRE": "Go to CER",
         "PROCURAR_HOSPITAL": "Seek urgent care",
         "PERSONALIZADA": "Custom guidance"
       }
@@ -919,12 +919,12 @@
         "side": "Affected side",
         "justification": "Clinical justification",
         "zone": "Residence zone",
-        "distance": "Estimated distance to CRE (km)"
+        "distance": "Estimated distance to CER (km)"
       },
       "values": {
         "female": "Female",
         "male": "Male",
-        "cre": "CRE auditor",
+        "cre": "CER auditor",
         "manager": "Manager",
         "routine": "Routine",
         "priority": "Priority",
@@ -946,10 +946,10 @@
         "pageTitle": "Registration",
         "pageSubtitle": "Create system actors and simulate the patient journey from primary care to authorization and linkage with the care network.",
         "bannerTitle": "Controlled environment for demonstrating the care pathway",
-        "bannerText": "Use this area to present how users and relationships would be created in a real operation. Records are persisted in this demonstration environment: the patient enters through primary care without a CRE, SISREG authorizes and routes the case, and partner organizations can be registered separately.",
+        "bannerText": "Use this area to present how users and relationships would be created in a real operation. Records are persisted in this demonstration environment: the patient enters through primary care without a CER, SISREG authorizes and routes the case, and partner organizations can be registered separately.",
         "tabs": {
           "manager": "Manager",
-          "cre": "CRE",
+          "cre": "CER",
           "patient": "Patient",
           "sisreg": "SISREG",
           "ong": "Partner NGO"
@@ -959,39 +959,39 @@
           "subtitle": "Creates a new management credential linked to a health professional and an institutional unit."
         },
         "cre": {
-          "title": "Create CRE",
-          "subtitle": "Registers the CNES unit, its orthopedic workshop and the initial credential for the CRE manager in one flow."
+          "title": "Create CER",
+          "subtitle": "Registers the CNES unit, its orthopedic workshop and the initial credential for the CER manager in one flow."
         },
         "patient": {
           "title": "Register patient through primary care",
           "subtitle": "Simulates a new case arriving from primary care: creates the patient, a temporary first-access credential and a request that remains pending SISREG authorization.",
-          "waitingNotice": "The patient will be created without a destination CRE. The request will remain “Awaiting authorization” until it is processed in the SISREG step.",
+          "waitingNotice": "The patient will be created without a destination CER. The request will remain “Awaiting authorization” until it is processed in the SISREG step.",
           "firstAccessNotice": "The patient does not need to provide an email or password in this registration. On first access, they confirm CPF, full name and date of birth; then they choose permanent credentials."
         },
         "sisreg": {
           "title": "Authorize and refer through SISREG",
-          "subtitle": "Select a pending request and destination CRE to simulate regulatory authorization.",
+          "subtitle": "Select a pending request and destination CER to simulate regulatory authorization.",
           "empty": "There are no requests awaiting SISREG authorization. Create a patient through primary care first.",
-          "effect": "When authorized, the system stores the SISREG number, links the CRE, changes the status to “In queue”, creates the CRE queue entry and notifies the patient.",
-          "authorize": "Authorize and link CRE"
+          "effect": "When authorized, the system stores the SISREG number, links the CER, changes the status to “In queue”, creates the CER queue entry and notifies the patient.",
+          "authorize": "Authorize and link CER"
         },
         "ong": {
           "title": "Register partner NGO",
-          "subtitle": "Registers a partnership between a civil-society organization and a CRE in the network.",
-          "noPartnerCre": "No partner CRE (independent organization)"
+          "subtitle": "Registers a partnership between a civil-society organization and a CER in the network.",
+          "noPartnerCre": "No partner CER (independent organization)"
         },
         "sections": {
           "creUnit": "Unit and workshop details",
-          "creResponsible": "CRE responsible professional and initial credential",
+          "creResponsible": "CER responsible professional and initial credential",
           "patientIdentity": "Patient identification and access",
           "ubsRequest": "Request originated in primary care",
-          "ubsRequestHelp": "The primary-care unit and requesting professional represent the case origin. The CRE must not be defined at this stage."
+          "ubsRequestHelp": "The primary-care unit and requesting professional represent the case origin. The CER must not be defined at this stage."
         },
         "fields": {
           "institutionalUnit": "Linked institutional unit",
-          "creCnes": "CRE CNES",
+          "creCnes": "CER CNES",
           "legalName": "Legal name",
-          "creName": "CRE name / trade name",
+          "creName": "CER name / trade name",
           "establishmentType": "Facility type",
           "monthlyCapacity": "Monthly production capacity",
           "responsibleName": "Technical manager name",
@@ -1003,10 +1003,10 @@
           "requestingUbs": "Requesting primary-care unit",
           "requestingProfessional": "Requesting professional",
           "pendingRequest": "Request awaiting SISREG",
-          "destinationCre": "Destination CRE",
+          "destinationCre": "Destination CER",
           "authorizationNumber": "SISREG authorization number",
           "sisregObservation": "Authorization note",
-          "partnerCre": "Partner CRE (optional)",
+          "partnerCre": "Partner CER (optional)",
           "ongName": "NGO name",
           "partnershipType": "Partnership type",
           "contactPerson": "Contact person",
@@ -1028,10 +1028,10 @@
         },
         "success": {
           "manager": "Manager and credential created successfully.",
-          "cre": "CRE, workshop and responsible credential created successfully.",
+          "cre": "CER, workshop and responsible credential created successfully.",
           "patient": "Patient successfully registered by the primary care unit. First access can now be completed with CPF, full name and date of birth; the request is awaiting SISREG authorization.",
-          "sisreg": "SISREG authorized: the patient was linked to the CRE and added to the queue.",
-          "ong": "Partner NGO linked to the CRE successfully."
+          "sisreg": "SISREG authorized: the patient was linked to the CER and added to the queue.",
+          "ong": "Partner NGO linked to the CER successfully."
         }
       }
     },
@@ -1051,7 +1051,7 @@
         "equity": "Equity analysis",
         "reports": "Reports",
         "registrations": "Registration",
-        "creCenters": "CREs and care network",
+        "creCenters": "CERs and care network",
         "communications": "Alerts and recalls"
       },
       "actions": {
@@ -1115,12 +1115,12 @@
         "registrations": {
           "breadcrumb": "Administration / Registration",
           "title": "Registration",
-          "subtitle": "Simulate actor creation and patient referral from primary care through SISREG to the CRE."
+          "subtitle": "Simulate actor creation and patient referral from primary care through SISREG to the CER."
         },
         "creCenters": {
-          "breadcrumb": "CREs and care network",
-          "title": "Regional Specialized Centers (CREs)",
-          "subtitle": "Count, location, capacity, and operating status of registered CREs"
+          "breadcrumb": "CERs and care network",
+          "title": "Specialized Rehabilitation Centers (CERs)",
+          "subtitle": "Count, location, capacity, and operating status of registered CERs"
         },
         "communications": {
           "title": "Communications and Alerts",
@@ -1250,7 +1250,7 @@
         "shipmentStatus": "Shipment status",
         "shipmentCount": "{count} registered shipments",
         "devices": "{count} devices",
-        "centersTitle": "CRE and workshop capacity",
+        "centersTitle": "CER and workshop capacity",
         "centersSubtitle": "Capacity use, queue, and active shipments",
         "capacity": "Monthly capacity",
         "activeShipments": "Active shipments",
@@ -1268,7 +1268,7 @@
         "deliveryBasis": "Based on delivered requests",
         "criticalRegion": "Region with queue above stock",
         "waitingQueue": "Waiting queue",
-        "centersAndNgos": "CRE capacity and NGO partnerships",
+        "centersAndNgos": "CER capacity and NGO partnerships",
         "ngoPartners": "{count} active NGO partners",
         "rehabilitationCenter": "Rehabilitation center",
         "capacityUsed": "Capacity used",
@@ -1330,10 +1330,10 @@
         "zoneRegistration": "Based on residence zone",
         "nonUrbanCoverage": "Non-urban coverage",
         "populationBasis": "Rural, riverside and remote share",
-        "distanceWaitTitle": "Waiting time vs. distance to the nearest CRE",
+        "distanceWaitTitle": "Waiting time vs. distance to the nearest CER",
         "distanceWaitSubtitle": "Scatter by zone type — highlights the geographic access gap",
         "distanceKm": "Distance (km)",
-        "distanceAxis": "Distance to CRE (km)",
+        "distanceAxis": "Distance to CER (km)",
         "waitAxis": "Wait (days)",
         "zoneDistribution": "Distribution by zone and demographics",
         "zoneDistributionSubtitle": "Care coverage using current data",
@@ -1371,7 +1371,7 @@
           "logistics": "Logistics",
           "lifecycle": "Lifecycle and recalls",
           "equity": "Equity and coverage",
-          "network": "CRE network"
+          "network": "CER network"
         }
       },
       "security": {
@@ -1386,7 +1386,7 @@
         "compliance": "No compliance indicators available.",
         "lifecycle": "No lifecycle alerts.",
         "shipments": "No shipments registered.",
-        "centers": "No workshop or CRE registered.",
+        "centers": "No workshop or CER registered.",
         "finance": "No financial entries registered.",
         "providers": "No suppliers registered.",
         "equity": "There is not enough waiting-time data yet."
@@ -1410,7 +1410,7 @@
         "subtitle": "Consolidated report showing which roles may access each data category and at what scope.",
         "data": "Data category",
         "patient": "Patient",
-        "cre": "CRE auditor",
+        "cre": "CER auditor",
         "manager": "Manager",
         "export": "Export matrix CSV",
         "scope": "Access scope",
@@ -1429,28 +1429,28 @@
           "NONE": "No access",
           "OWN_READ": "Read own data only",
           "OWN_READ_WRITE": "Read and update own data",
-          "UNIT_READ": "Read data linked to the CRE unit",
-          "UNIT_MANAGE": "Read and operate data linked to the CRE unit",
+          "UNIT_READ": "Read data linked to the CER unit",
+          "UNIT_MANAGE": "Read and operate data linked to the CER unit",
           "NATIONAL_READ": "National consolidated read access",
           "NATIONAL_MANAGE": "Full national management"
         },
         "empty": "The access matrix is not available yet."
       },
       "creCenters": {
-        "active": "Active CREs",
+        "active": "Active CERs",
         "registeredNetwork": "Network registered in the database",
         "regionsCovered": "Regions covered",
         "nationalCoverage": "Regional coverage",
-        "queue": "CRE queue",
+        "queue": "CER queue",
         "waitingPatients": "Patients waiting",
         "capacity": "Monthly capacity",
         "monthlyCapacity": "Registered production capacity",
         "regionalDistribution": "Regional distribution",
-        "regionalSubtitle": "Active CREs by Brazilian region",
-        "directory": "CRE directory",
+        "regionalSubtitle": "Active CERs by Brazilian region",
+        "directory": "CER directory",
         "directorySubtitle": "Units enabled for OPM or linked to an orthopedic workshop",
         "searchPlaceholder": "Search by name, CNES, or municipality",
-        "name": "CRE / Unit",
+        "name": "CER / Unit",
         "location": "Location",
         "operations": "Operations",
         "status": "Status",
@@ -1464,7 +1464,7 @@
         "inactiveStatus": "Inactive",
         "opmEnabled": "OPM enabled",
         "viewMap": "View on map",
-        "noCenters": "No CRE found."
+        "noCenters": "No CER found."
       }
     }
   },
@@ -1505,7 +1505,7 @@
     "audience": {
       "all": "All users",
       "patients": "All patients",
-      "cre": "All CREs",
+      "cre": "All CERs",
       "managers": "Managers",
       "unitPatients": "Patients from my unit",
       "unitStaff": "Staff from my unit"
@@ -1515,7 +1515,7 @@
       "lifecycle": "Lifecycle / recalls",
       "logistics": "Logistics",
       "reports": "Reports",
-      "centers": "CRE network",
+      "centers": "CER network",
       "finance": "Finance",
       "equity": "Equity",
       "patients": "Patients",
