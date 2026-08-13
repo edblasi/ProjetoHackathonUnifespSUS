@@ -764,7 +764,7 @@
     },
     "page": {
       "executive": {
-        "title": "National Management Dashboard",
+        "title": "Regional Management Dashboard",
         "subtitle": "Consolidated indicators from the UMDR network"
       },
       "governance": {
@@ -776,7 +776,7 @@
         "subtitle": "Recalls and device monitoring"
       },
       "logistics": {
-        "title": "National logistics",
+        "title": "Regional logistics",
         "subtitle": "Inventory, queues and reverse shipments"
       },
       "finance": {
@@ -813,7 +813,7 @@
       "requests": "Requests",
       "deliveries": "Deliveries",
       "cancelled": "Cancelled",
-      "regional": "Inventory and queue by region",
+      "regional": "Inventory and queue by regional service area",
       "stock": "Inventory",
       "queue": "Queue"
     },
@@ -1037,10 +1037,10 @@
     },
     "standard": {
       "brand": "NAADC · SUS",
-      "brandFull": "National Assistive Device Coordination Center",
+      "brandFull": "Regional Assistive Device Coordination Center",
       "search": "Search...",
       "mainMenu": "Main menu",
-      "manager": "National manager",
+      "manager": "Regional manager",
       "executiveAccess": "Executive access · LGPD",
       "nav": {
         "executive": "Executive overview",
@@ -1080,7 +1080,7 @@
       "pages": {
         "executive": {
           "title": "Executive Overview",
-          "subtitle": "Consolidated national indicators using current database records"
+          "subtitle": "Consolidated regional indicators using current database records"
         },
         "governance": {
           "breadcrumb": "Policy and governance",
@@ -1095,7 +1095,7 @@
         "logistics": {
           "breadcrumb": "Logistics and network",
           "title": "Logistics and Waiting Queue Monitoring",
-          "subtitle": "National assistive-device flow — SISREG"
+          "subtitle": "Regional assistive-device flow — SISREG"
         },
         "finance": {
           "breadcrumb": "Finance and procurement",
@@ -1110,7 +1110,7 @@
         "reports": {
           "breadcrumb": "Reports",
           "title": "Report Generator and Data Audit",
-          "subtitle": "Filtered exports and recent reports — National Assistive Devices Center"
+          "subtitle": "Filtered exports and recent reports — Regional Assistive Devices Center"
         },
         "registrations": {
           "breadcrumb": "Administration / Registration",
@@ -1128,7 +1128,7 @@
         }
       },
       "kpi": {
-        "conformity": "National compliance rate",
+        "conformity": "Regional compliance rate",
         "efficiency": "Operational efficiency",
         "recalls": "Active device recalls",
         "logistics": "Logistics alerts",
@@ -1164,7 +1164,7 @@
         "report": "New report",
         "reportMessage": "Report available: {name}",
         "current": "Now",
-        "matching": "New national match",
+        "matching": "New regional match",
         "matchingMessage": "{{product}} · {{route}}"
       },
       "governance": {
@@ -1178,20 +1178,20 @@
         "approvedBy": "Approved by",
         "systemManagement": "UMDR system management",
         "complianceTeam": "Compliance team",
-        "nationalManagement": "National management",
+        "nationalManagement": "Regional management",
         "ministry": "Ministry of Health — Federative Republic of Brazil",
         "classification": "Classification: Executive",
         "reportId": "Report ID: {id}",
         "issued": "Issued on: {date}",
         "executiveSummary": "Executive summary",
-        "summaryParagraphOne": "The system shows national compliance of {conformity} across {units} active units, with operational efficiency of {efficiency}. Values are calculated directly from current database records.",
+        "summaryParagraphOne": "The system shows regional compliance of {conformity} across {units} active units, with operational efficiency of {efficiency}. Values are calculated directly from current database records.",
         "summaryParagraphTwo": "There are {recalls} active recalls and {alerts} logistics alerts for a base of {patients} registered patients. Pending items should be followed by the responsible teams until resolved.",
         "complianceSummary": "Compliance domain summary",
         "domain": "Domain",
         "score": "Score",
         "systemManagementRole": "UMDR administration and data",
         "complianceTeamRole": "Audit and governance",
-        "nationalManagementRole": "National SUS management"
+        "nationalManagementRole": "Regional SUS management"
       },
       "compliance": {
         "items": {
@@ -1242,8 +1242,8 @@
         "reusedHint": "Accepted/transferred matches"
       },
       "logistics": {
-        "regionalTitle": "Inventory, queue, and transit by region",
-        "regionalSubtitle": "Consolidated view of the national network",
+        "regionalTitle": "Inventory, queue and transit by regional service area",
+        "regionalSubtitle": "Consolidated view of the regional network",
         "stock": "Inventory",
         "queue": "Queue",
         "transit": "In transit",
@@ -1259,14 +1259,14 @@
         "alerts": "Logistics alerts",
         "stockTotal": "Total inventory",
         "queueTotal": "Total queue",
-        "averageLeadTime": "National average lead time",
+        "averageLeadTime": "Regional average lead time",
         "activeQueue": "Active queue records",
         "queueSisreg": "Requests in queue",
         "devicesTransit": "Devices in transit",
         "registeredShipments": "Sum of active shipments",
         "onTimeRate": "Completed delivery rate",
         "deliveryBasis": "Based on delivered requests",
-        "criticalRegion": "Region with queue above stock",
+        "criticalRegion": "Service area with queue above inventory",
         "waitingQueue": "Waiting queue",
         "centersAndNgos": "CER capacity and NGO partnerships",
         "ngoPartners": "{count} active NGO partners",
@@ -1314,18 +1314,18 @@
       },
       "equity": {
         "scatterTitle": "Queue volume versus waiting time",
-        "scatterSubtitle": "Each point represents a macro-region with database records",
+        "scatterSubtitle": "Each point represents a regional service area with database records",
         "queueRecords": "Queue records",
         "waitDays": "Wait (days)",
         "distributionTitle": "Territorial patient distribution",
-        "distributionSubtitle": "Share by macro-region",
+        "distributionSubtitle": "Share by regional service area",
         "indicators": "Waiting indicators",
-        "averageWait": "National average wait",
-        "maximumWait": "Highest regional wait",
+        "averageWait": "Regional average wait",
+        "maximumWait": "Highest wait across service areas",
         "days": "days",
         "equityIndex": "Care equity index",
-        "disparityReduction": "Regional balance index",
-        "comparedRegions": "Comparison across regions with queue data",
+        "disparityReduction": "Balance index across service areas",
+        "comparedRegions": "Comparison among service areas with queues",
         "remotePatients": "Patients in remote areas",
         "zoneRegistration": "Based on residence zone",
         "nonUrbanCoverage": "Non-urban coverage",
@@ -1338,9 +1338,9 @@
         "zoneDistribution": "Distribution by zone and demographics",
         "zoneDistributionSubtitle": "Care coverage using current data",
         "goals": "Operational goals",
-        "disparityGoal": "Regional balance",
+        "disparityGoal": "Balance across service areas",
         "ruralCoverageGoal": "Non-urban coverage",
-        "waitSummary": "Average wait: {average} days · highest regional average: {maximum} days",
+        "waitSummary": "Average wait: {average} days · highest service-area average: {maximum} days",
         "dayValue": "{value} days"
       },
       "reports": {
@@ -1357,8 +1357,8 @@
         "resultCount": "{count} results",
         "recentTitle": "Recently generated reports",
         "databaseRecords": "Database records",
-        "region": "Region",
-        "allRegions": "All",
+        "region": "Regional service area",
+        "allRegions": "All service areas",
         "deviceCategory": "Device category",
         "qualityIndicator": "Quality indicator",
         "lastThirtyDays": "Recent records",
@@ -1375,7 +1375,7 @@
         }
       },
       "security": {
-        "managerLevel": "National Manager access.",
+        "managerLevel": "Regional Manager access.",
         "lgpd": "Sensitive data is pseudonymized in accordance with LGPD guidelines (Law No. 13,709/2018)."
       },
       "empty": {
@@ -1392,11 +1392,11 @@
         "equity": "There is not enough waiting-time data yet."
       },
       "regions": {
-        "N": "North",
-        "NE": "Northeast",
-        "CO": "Central-West",
-        "SE": "Southeast",
-        "S": "South",
+        "N": "Greater São Paulo",
+        "NE": "Campinas",
+        "CO": "Osasco",
+        "SE": "Sorocaba",
+        "S": "Santos",
         "—": "Not informed"
       },
       "zones": {
@@ -1431,22 +1431,22 @@
           "OWN_READ_WRITE": "Read and update own data",
           "UNIT_READ": "Read data linked to the CER unit",
           "UNIT_MANAGE": "Read and operate data linked to the CER unit",
-          "NATIONAL_READ": "National consolidated read access",
-          "NATIONAL_MANAGE": "Full national management"
+          "NATIONAL_READ": "Regional consolidated read access",
+          "NATIONAL_MANAGE": "Full regional management"
         },
         "empty": "The access matrix is not available yet."
       },
       "creCenters": {
         "active": "Active CERs",
         "registeredNetwork": "Network registered in the database",
-        "regionsCovered": "Regions covered",
+        "regionsCovered": "Service areas covered",
         "nationalCoverage": "Regional coverage",
         "queue": "CER queue",
         "waitingPatients": "Patients waiting",
         "capacity": "Monthly capacity",
         "monthlyCapacity": "Registered production capacity",
-        "regionalDistribution": "Regional distribution",
-        "regionalSubtitle": "Active CERs by Brazilian region",
+        "regionalDistribution": "Distribution by regional service area",
+        "regionalSubtitle": "Active CER units by service area in São Paulo state",
         "directory": "CER directory",
         "directorySubtitle": "Units enabled for OPM or linked to an orthopedic workshop",
         "searchPlaceholder": "Search by name, CNES, or municipality",

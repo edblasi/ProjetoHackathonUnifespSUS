@@ -764,7 +764,7 @@
     },
     "page": {
       "executive": {
-        "title": "Panel Nacional de Gestión",
+        "title": "Panel Regional de Gestión",
         "subtitle": "Indicadores consolidados de la red UMDR"
       },
       "governance": {
@@ -776,7 +776,7 @@
         "subtitle": "Retiros y seguimiento de equipos"
       },
       "logistics": {
-        "title": "Logística nacional",
+        "title": "Logística regional",
         "subtitle": "Inventario, colas y envíos inversos"
       },
       "finance": {
@@ -813,7 +813,7 @@
       "requests": "Solicitudes",
       "deliveries": "Entregas",
       "cancelled": "Canceladas",
-      "regional": "Inventario y cola por región",
+      "regional": "Inventario y cola por área regional",
       "stock": "Inventario",
       "queue": "Cola"
     },
@@ -1037,10 +1037,10 @@
     },
     "standard": {
       "brand": "CNDA · SUS",
-      "brandFull": "Central Nacional de Dispositivos de Asistencia",
+      "brandFull": "Central Regional de Dispositivos de Asistencia",
       "search": "Buscar...",
       "mainMenu": "Menú principal",
-      "manager": "Gestor nacional",
+      "manager": "Gestor regional",
       "executiveAccess": "Acceso ejecutivo · LGPD",
       "nav": {
         "executive": "Visión ejecutiva",
@@ -1080,7 +1080,7 @@
       "pages": {
         "executive": {
           "title": "Visión Ejecutiva",
-          "subtitle": "Indicadores nacionales consolidados con datos actuales de la base"
+          "subtitle": "Indicadores regionales consolidados con datos actuales de la base"
         },
         "governance": {
           "breadcrumb": "Políticas y gobernanza",
@@ -1095,7 +1095,7 @@
         "logistics": {
           "breadcrumb": "Logística y red",
           "title": "Monitoreo de Logística y Cola de Espera",
-          "subtitle": "Flujo nacional de dispositivos de asistencia — SISREG"
+          "subtitle": "Flujo regional de dispositivos de asistencia — SISREG"
         },
         "finance": {
           "breadcrumb": "Finanzas y licitaciones",
@@ -1110,7 +1110,7 @@
         "reports": {
           "breadcrumb": "Informes",
           "title": "Generador de Informes y Auditoría de Datos",
-          "subtitle": "Exportación filtrada e informes recientes — Centro Nacional de Dispositivos de Asistencia"
+          "subtitle": "Exportación filtrada e informes recientes — Centro Regional de Dispositivos de Asistencia"
         },
         "registrations": {
           "breadcrumb": "Administración / Registro",
@@ -1128,7 +1128,7 @@
         }
       },
       "kpi": {
-        "conformity": "Tasa nacional de cumplimiento",
+        "conformity": "Tasa regional de cumplimiento",
         "efficiency": "Eficiencia operativa",
         "recalls": "Retiros activos de equipos",
         "logistics": "Alertas logísticas",
@@ -1164,7 +1164,7 @@
         "report": "Nuevo informe",
         "reportMessage": "Informe disponible: {name}",
         "current": "Ahora",
-        "matching": "Nuevo matching nacional",
+        "matching": "Nuevo matching regional",
         "matchingMessage": "{{product}} · {{route}}"
       },
       "governance": {
@@ -1178,20 +1178,20 @@
         "approvedBy": "Aprobado por",
         "systemManagement": "Gestión del sistema UMDR",
         "complianceTeam": "Equipo de cumplimiento",
-        "nationalManagement": "Gestión nacional",
+        "nationalManagement": "Gestión regional",
         "ministry": "Ministerio de Salud — República Federativa de Brasil",
         "classification": "Clasificación: Ejecutiva",
         "reportId": "ID del informe: {id}",
         "issued": "Emitido el: {date}",
         "executiveSummary": "Resumen ejecutivo",
-        "summaryParagraphOne": "El sistema presenta un cumplimiento nacional de {conformity} en {units} unidades activas, con una eficiencia operativa de {efficiency}. Los valores se calculan directamente a partir de los registros actuales de la base de datos.",
+        "summaryParagraphOne": "El sistema presenta un cumplimiento regional de {conformity} en {units} unidades activas, con una eficiencia operativa de {efficiency}. Los valores se calculan directamente a partir de los registros actuales de la base de datos.",
         "summaryParagraphTwo": "Hay {recalls} retiros activos y {alerts} alertas logísticas para una base de {patients} pacientes registrados. Los elementos pendientes deben ser acompañados por las áreas responsables hasta su resolución.",
         "complianceSummary": "Resumen por dominio de cumplimiento",
         "domain": "Dominio",
         "score": "Puntuación",
         "systemManagementRole": "Administración y datos de UMDR",
         "complianceTeamRole": "Auditoría y gobernanza",
-        "nationalManagementRole": "Gestión nacional del SUS"
+        "nationalManagementRole": "Gestión regional del SUS"
       },
       "compliance": {
         "items": {
@@ -1242,8 +1242,8 @@
         "reusedHint": "Matchings aceptados/transferidos"
       },
       "logistics": {
-        "regionalTitle": "Inventario, cola y tránsito por región",
-        "regionalSubtitle": "Visión consolidada de la red nacional",
+        "regionalTitle": "Inventario, cola y tránsito por área regional",
+        "regionalSubtitle": "Visión consolidada de la red regional",
         "stock": "Inventario",
         "queue": "Cola",
         "transit": "En tránsito",
@@ -1259,14 +1259,14 @@
         "alerts": "Alertas logísticas",
         "stockTotal": "Inventario total",
         "queueTotal": "Cola total",
-        "averageLeadTime": "Tiempo medio nacional",
+        "averageLeadTime": "Tiempo medio regional",
         "activeQueue": "Registros activos en la cola",
         "queueSisreg": "Solicitudes en fila",
         "devicesTransit": "Dispositivos en tránsito",
         "registeredShipments": "Suma de envíos activos",
         "onTimeRate": "Tasa de entregas completadas",
         "deliveryBasis": "Basada en solicitudes entregadas",
-        "criticalRegion": "Región con cola superior al inventario",
+        "criticalRegion": "Área con cola superior al inventario",
         "waitingQueue": "Cola de espera",
         "centersAndNgos": "Capacidad de los CER y alianzas con ONG",
         "ngoPartners": "{count} ONG asociadas activas",
@@ -1314,18 +1314,18 @@
       },
       "equity": {
         "scatterTitle": "Relación entre volumen de cola y tiempo de espera",
-        "scatterSubtitle": "Cada punto representa una macrorregión con registros en la base",
+        "scatterSubtitle": "Cada punto representa un área regional con registros en la base",
         "queueRecords": "Registros de la cola",
         "waitDays": "Espera (días)",
         "distributionTitle": "Distribución territorial de pacientes",
-        "distributionSubtitle": "Participación por macrorregión",
+        "distributionSubtitle": "Participación por área regional",
         "indicators": "Indicadores de espera",
-        "averageWait": "Espera promedio nacional",
-        "maximumWait": "Mayor espera regional",
+        "averageWait": "Espera promedio regional",
+        "maximumWait": "Mayor espera entre áreas",
         "days": "días",
         "equityIndex": "Índice de equidad asistencial",
-        "disparityReduction": "Índice de equilibrio regional",
-        "comparedRegions": "Comparación entre regiones con cola",
+        "disparityReduction": "Índice de equilibrio entre áreas",
+        "comparedRegions": "Comparación entre áreas con cola",
         "remotePatients": "Pacientes en áreas remotas",
         "zoneRegistration": "Basado en la zona de residencia",
         "nonUrbanCoverage": "Cobertura no urbana",
@@ -1338,9 +1338,9 @@
         "zoneDistribution": "Distribución por zona y demografía",
         "zoneDistributionSubtitle": "Cobertura asistencial con datos actuales",
         "goals": "Metas operativas",
-        "disparityGoal": "Equilibrio regional",
+        "disparityGoal": "Equilibrio entre áreas",
         "ruralCoverageGoal": "Cobertura no urbana",
-        "waitSummary": "Espera media: {average} días · mayor promedio regional: {maximum} días",
+        "waitSummary": "Espera promedio: {average} días · mayor promedio entre áreas: {maximum} días",
         "dayValue": "{value} días"
       },
       "reports": {
@@ -1357,8 +1357,8 @@
         "resultCount": "{count} resultados",
         "recentTitle": "Informes generados recientemente",
         "databaseRecords": "Registros de la base",
-        "region": "Región",
-        "allRegions": "Todas",
+        "region": "Área regional",
+        "allRegions": "Todas las áreas",
         "deviceCategory": "Categoría del dispositivo",
         "qualityIndicator": "Indicador de calidad",
         "lastThirtyDays": "Registros recientes",
@@ -1375,7 +1375,7 @@
         }
       },
       "security": {
-        "managerLevel": "Acceso de Gestor Nacional.",
+        "managerLevel": "Acceso de Gestor Regional.",
         "lgpd": "Los datos sensibles están seudonimizados de acuerdo con las directrices de la LGPD (Ley n.º 13.709/2018)."
       },
       "empty": {
@@ -1392,11 +1392,11 @@
         "equity": "Aún no hay datos suficientes de espera."
       },
       "regions": {
-        "N": "Norte",
-        "NE": "Nordeste",
-        "CO": "Centro-Oeste",
-        "SE": "Sudeste",
-        "S": "Sur",
+        "N": "Gran São Paulo",
+        "NE": "Campinas",
+        "CO": "Osasco",
+        "SE": "Sorocaba",
+        "S": "Santos",
         "—": "No informado"
       },
       "zones": {
@@ -1431,22 +1431,22 @@
           "OWN_READ_WRITE": "Lectura y actualización de los propios datos",
           "UNIT_READ": "Lectura vinculada a la unidad CER",
           "UNIT_MANAGE": "Lectura y operación vinculadas a la unidad CER",
-          "NATIONAL_READ": "Lectura nacional consolidada",
-          "NATIONAL_MANAGE": "Gestión nacional completa"
+          "NATIONAL_READ": "Lectura regional consolidada",
+          "NATIONAL_MANAGE": "Gestión regional completa"
         },
         "empty": "La matriz de acceso aún no está disponible."
       },
       "creCenters": {
         "active": "CERs activos",
         "registeredNetwork": "Red registrada en la base de datos",
-        "regionsCovered": "Regiones cubiertas",
+        "regionsCovered": "Áreas cubiertas",
         "nationalCoverage": "Cobertura regional",
         "queue": "Cola en los CERs",
         "waitingPatients": "Pacientes en espera",
         "capacity": "Capacidad mensual",
         "monthlyCapacity": "Capacidad de producción registrada",
-        "regionalDistribution": "Distribución regional",
-        "regionalSubtitle": "CERs activos por región de Brasil",
+        "regionalDistribution": "Distribución por área regional",
+        "regionalSubtitle": "CER activos por área de atención en el estado de São Paulo",
         "directory": "Directorio de CERs",
         "directorySubtitle": "Unidades habilitadas para OPM o vinculadas a un taller ortopédico",
         "searchPlaceholder": "Buscar por nombre, CNES o municipio",
